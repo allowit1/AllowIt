@@ -311,7 +311,7 @@
                     localStorage.setItem('userName', decodedToken.name);
                     localStorage.setItem('userEmail', decodedToken.email);
                     
-                    window.location.href = 'http://localhost:5050/userPage.html';
+                    window.location.href = '../userPage.html';
                 } else {
                     console.warn("User details not found in decoded token.");
                 }
