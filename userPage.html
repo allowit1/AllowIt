@@ -372,12 +372,14 @@
         </div>
     </div>
     <script>
+        const email = localStorage.getItem("userEmail");
+
         document.addEventListener("DOMContentLoaded", () => {
             const userName = localStorage.getItem("userName");
             const userEmail = localStorage.getItem("userEmail");
             const userPosition = localStorage.getItem("userPosition");
 
-            if (userName && userEmail && userPosition) {
+            if (userName && userEmail) {
                 document.getElementById("userName").textContent = userName;
                 document.getElementById("userEmail").textContent = userEmail;
                 document.getElementById("userPosition").textContent = userPosition;
@@ -495,17 +497,29 @@
             document.getElementById("time").value = '';
             document.getElementById("days").value = '';
 
+
+
             // Refresh permissions list
             loadPermissions();
         }
 
         function getMessages() {
             // Placeholder function for getting messages
-            return [
-                "System update will occur at midnight.",
-                "Your password will expire in 5 days.",
-                "New features have been added to the dashboard."
-            ];
+            // return [
+            //     "System update will occur at midnight.",
+            //     "Your password will expire in 5 days.",
+            //     "New features have been added to the dashboard."
+            // ];
+
+            fetch(`/messages/${email}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    return data;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
         }
 
         function getPermissions() {
