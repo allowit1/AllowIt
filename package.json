@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@descope/web-js-sdk": "^1.13.1",
+    "bootstrap": "^5.3.3"
+  }
+}

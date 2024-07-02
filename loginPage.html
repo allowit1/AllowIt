@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - AllowIt</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --text-color: #333;
+            --bg-color: #ecf0f1;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: var(--bg-color);
+            font-family: 'Roboto', sans-serif;
+            overflow: hidden;
+        }
+
+        .background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .container {
+            text-align: center;
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            max-width: 400px;
+            width: 90%;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .logo {
+            width: 120px;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.1);
+        }
+
+        .title {
+            font-size: 28px;
+            margin-bottom: 30px;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .g_id_signin {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #user-info {
+            margin-top: 30px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .help-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--primary-color);
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .help-button:hover {
+            background: var(--secondary-color);
+            transform: scale(1.1);
+        }
+
+        .help-icon {
+            width: 30px;
+            height: 30px;
+            fill: #fff;
+        }
+
+        .help-popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 400px;
+            background-color: #fff;
+            border-radius: 15px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            padding-right: 50px;
+            text-align: left;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .help-popup.active {
+            display: block;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .help-popup h5 {
+            margin-top: 0;
+            font-size: 24px;
+            color: var(--text-color);
+            display: flex;
+            align-items: center;
+        }
+
+        .help-popup .logo {
+            width: 40px;
+            margin-right: 15px;
+        }
+
+        .help-popup p {
+            font-size: 16px;
+            color: #666;
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+
+        .help-popup ul {
+            padding-left: 20px;
+        }
+
+        .help-popup li {
+            margin-bottom: 10px;
+        }
+
+        .contact-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: #fff;
+            text-align: center;
+            border: none;
+            border-radius: 8px;
+            text-decoration: none;
+            margin-top: 20px;
+            font-size: 16px;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .contact-button:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .close-button:hover {
+            color: var(--accent-color);
+            transform: rotate(90deg);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .container > * {
+            animation: slideIn 0.5s ease forwards;
+        }
+
+        .container > *:nth-child(1) { animation-delay: 0.1s; }
+        .container > *:nth-child(2) { animation-delay: 0.2s; }
+        .container > *:nth-child(3) { animation-delay: 0.3s; }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 30px;
+            }
+
+            .title {
+                font-size: 24px;
+            }
+
+            .help-button {
+                width: 50px;
+                height: 50px;
+                bottom: 20px;
+                right: 20px;
+            }
+
+            .help-icon {
+                width: 25px;
+                height: 25px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="container">
+        <img src="../images/logo.jpg" alt="AllowIt Logo" class="logo">
+        <div class="title">AllowIt - Secure Access</div>
+        <div id="g_id_onload"
+             data-client_id="1061973614325-0vum2bbneo22tcq8c3de42dvq5jt1ads.apps.googleusercontent.com"
+             data-context="signin"
+             data-ux_mode="popup"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div class="g_id_signin"
+             data-type="standard"
+             data-size="large"
+             data-theme="outline"
+             data-text="sign_in_with"
+             data-shape="rectangular"
+             data-logo_alignment="left">
+        </div>
+        <div id="user-info"></div>
+    </div>
+
+    <button class="help-button" onclick="toggleHelpPopup()">
+        <img class="help-icon" src="../images/help-icon.png" alt="Help Icon" style="width: 30px; height: 30px;"/>
+    </button>
+
+    <div class="help-popup" id="helpPopup">
+        <button class="close-button" onclick="toggleHelpPopup()">✖</button>
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <img src="../images/logo.jpg" alt="AllowIt Logo" class="logo" style="width: 40px;">
+            <h5 style="margin-left: 15px;">Why Choose AllowIt?</h5>
+        </div>
+        <p>Welcome to AllowIt, where we revolutionize how businesses manage employee permissions and security.</p>
+        <p>Our cutting-edge platform offers:</p>
+        <ul>
+            <li><strong>Automated Permission Management:</strong> Save time and reduce errors with our smart automation features.</li>
+            <li><strong>Enhanced Security:</strong> Protect your organization against potential security breaches with our robust permission controls.</li>
+            <li><strong>Easy Integration:</strong> Seamlessly integrate with your existing systems to streamline permission workflows.</li>
+        </ul>
+        <p>Join the many companies already benefiting from our innovative solutions. Get in touch with us to learn more and start your journey towards effortless permission management.</p>
+        <a href="https://mail.google.com/mail/?view=cm&fs=1&to=allowit072@gmail.com&su=Inquiry%20About%20AllowIt%20Services&body=Dear%20AllowIt%20Team%2C%0D%0A%0D%0AI%20hope%20this%20email%20finds%20you%20well.%20I%20am%20reaching%20out%20to%20express%20my%20interest%20in%20learning%20more%20about%20AllowIt%27s%20services%20for%20automated%20permission%20management%20and%20enhanced%20security.%0D%0A%0D%0AOur%20organization%20is%20currently%20looking%20to%20improve%20our%20employee%20permissions%20system%20and%20strengthen%20our%20overall%20security%20posture.%20I%20believe%20that%20AllowIt%27s%20solutions%20could%20be%20a%20great%20fit%20for%20our%20needs.%0D%0A%0D%0ACould%20you%20please%20provide%20me%20with%20more%20information%20about%3A%0D%0A%0D%0A1.%20Your%20automated%20permission%20management%20features%0D%0A2.%20The%20security%20measures%20implemented%20in%20your%20platform%0D%0A3.%20The%20integration%20process%20with%20existing%20systems%0D%0A4.%20Pricing%20options%20and%20any%20available%20demos%20or%20trials%0D%0A%0D%0AThank%20you%20for%20your%20time%20and%20assistance.%20I%20look%20forward%20to%20hearing%20from%20you%20soon.%0D%0A%0D%0ABest%20regards%2C%0D%0A%5BYour%20Name%5D%0D%0A%5BYour%20Company%5D" class="contact-button" target="_blank">Contact Us</a>
+    </div>
+
+    <script>
+        function handleCredentialResponse(response) {
+            console.log("Credential response received:", response);
+            if (response.error) {
+                console.error("Error: ", response.error);
+                return;
+            }
+            console.log("Encoded JWT ID token: " + response.credential);
+
+            try {
+                var base64Url = response.credential.split('.')[1];
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+
+                var decodedToken = JSON.parse(jsonPayload);
+                console.log("Decoded token:", decodedToken);
+
+                if (decodedToken.name && decodedToken.email) {
+                    localStorage.setItem('userName', decodedToken.name);
+                    localStorage.setItem('userEmail', decodedToken.email);
+                    
+                    window.location.href = 'http://localhost:5050/userPage.html';
+                } else {
+                    console.warn("User details not found in decoded token.");
+                }
+            } catch (e) {
+                console.error("Error decoding token: ", e);
+            }
+        }
+
+        window.onload = function() {
+            try {
+                console.log("Initializing Google Sign-In...");
+                google.accounts.id.initialize({
+                    client_id: "1061973614325-0vum2bbneo22tcq8c3de42dvq5jt1ads.apps.googleusercontent.com",
+                    callback: handleCredentialResponse
+                });
+                google.accounts.id.renderButton(
+                    document.querySelector(".g_id_signin"),
+                    { theme: "outline", size: "large" }
+                );
+                google.accounts.id.prompt();
+                console.log("Google Sign-In initialized and button rendered.");
+            } catch (error) {
+                console.error("Initialization error: ", error);
+            }
+        }
+
+        function toggleHelpPopup() {
+            var helpPopup = document.getElementById('helpPopup');
+            helpPopup.classList.toggle('active');
+        }
+
+        window.onclick = function(event) {
+            var helpPopup = document.getElementById('helpPopup');
+            if (event.target !== helpPopup && !helpPopup.contains(event.target) && event.target.className !== 'help-button' && !event.target.closest('.help-button')) {
+                helpPopup.classList.remove('active');
+            }
+        }
+    </script>
+</body>
+</html>
