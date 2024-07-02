@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - AllowIt</title>
@@ -425,6 +426,7 @@
 
         function loadMessages() {
             const messages = getMessages();
+            console.log(messages);
             const messagesList = document.getElementById("messagesList");
             messagesList.innerHTML = '';
             messages.forEach(message => {
@@ -504,22 +506,12 @@
         }
 
         function getMessages() {
-            // Placeholder function for getting messages
-            // return [
-            //     "System update will occur at midnight.",
-            //     "Your password will expire in 5 days.",
-            //     "New features have been added to the dashboard."
-            // ];
-
-            fetch(`/messages/${email}`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log(data);
-                    return data;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                });
+            return axios.get("http://127.0.0.1:8000/messages")
+        .then(response => response.data)
+        .catch(error => {
+            console.error('Error fetching messages:', error);
+            return [];
+        });
         }
 
         function getPermissions() {
