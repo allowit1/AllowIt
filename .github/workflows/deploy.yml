@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
@@ -25,7 +25,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Archive application files
-        run: Compress-Archive -Path . -DestinationPath app.zip -Force
+        run: zip -r app.zip .
 
       - name: Login via Azure CLI
         uses: azure/login@v1
@@ -35,5 +35,5 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: "alow-it" # Replace with your Azure App Service name
+          app-name: "AllowIt"
           package: ./app.zip
