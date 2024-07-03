@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
+import pymongo
+from pymongo import MongoClient
+import os
 
 # Initialize the FastAPI app
 app = FastAPI()
@@ -21,6 +24,7 @@ class Message(BaseModel):
     content: str
 
 class Permission(BaseModel):
+    mail: str 
     name: str
     status: str
     urgency: str
@@ -60,6 +64,18 @@ applications = [
     Application(id="app5", name="Application 5", icon="../images/app-icon.png", href="https://github.com/")
 ]
 
+company = "AllowIt"
+
+MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
+
+@app.on_event("startup")
+def startup_db_client():
+    app.mongodb_client = MongoClient(MONGO_URL)
+    app.database = app.mongodb_client["allowit123"]
+    app.collection = app.database["permissions"]
+    app.database.users.insert_one({"name": "John Doe", "email": " johndoe@gmail.com", "permissions": "HR System Access"})
+
+
 # API endpoint to get system messages
 @app.get("/messages", response_model=List[Message])
 async def get_messages():
@@ -76,18 +92,26 @@ async def get_applications():
     return applications
 
 # API endpoint to submit a permission request
+# API endpoint to submit a permission request
 @app.post("/permission-request")
 async def submit_permission_request(request: PermissionRequest):
     try:
+
         # Process the permission request (in production, save to database)
         print(f"Received permission request: {request}")
+        
         # Simulate adding a new permission
         new_permission = Permission(
-            name=f"Access to Application {request.applicationId}",
+            name=f"Access to Application {request.applicationId}",  # Ensure the 'name' field is provided
             status="Pending",
-            urgency=request.urgency
+            urgency=request.urgency,
+            timeRemaining=None  # Add 'timeRemaining' or any other required fields if necessary
         )
-        permissions.append(new_permission)
+
+        # Insert the new permission into the database
+        collection_name = f"pending_{company}"
+        app.database[collection_name].insert_one(new_permission.dict())
+        
         return {"status": "success", "message": "Permission request submitted successfully"}
     except Exception as e:
         print(f"Error processing permission request: {str(e)}")
