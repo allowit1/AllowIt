@@ -439,7 +439,7 @@
             try {
                 // fetch messages from the server
                 console.log(email);
-                const response = await axios.get("http://127.0.0.1:5001/messages/{email}");
+                const response = await axios.get(`http://127.0.0.1:5001/messages/${email}`);
                 const messages = response.data;
                 const messagesList = document.getElementById("messagesList");
                 messagesList.innerHTML = '';
@@ -459,7 +459,7 @@
         async function loadPermissions() {
             try {
                 // fetch permissions from the server
-                const response = await axios.get("http://127.0.0.1:5001/permissions/{email}");
+                const response = await axios.get(`http://127.0.0.1:5001/permissions/${email}`);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("permissionsList");
                 permissionsList.innerHTML = '';
