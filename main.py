@@ -61,12 +61,12 @@ applications = [
 ]
 
 # API endpoint to get system messages
-@app.get("/messages", response_model=List[Message])
+@app.get("/messages/{email}", response_model=List[Message], tags=["messages"])
 async def get_messages():
     return messages
 
 # API endpoint to get recent permissions
-@app.get("/permissions", response_model=List[Permission])
+@app.get("/permissions/{email}", response_model=List[Permission])
 async def get_permissions():
     return permissions
 
@@ -77,7 +77,7 @@ async def get_applications():
 
 # API endpoint to submit a permission request
 @app.post("/permission-request")
-async def submit_permission_request(request: PermissionRequest):
+async def submit_permission_request(request: PermissionRequest, email: Optional[str] = None):
     try:
         # Process the permission request (in production, save to database)
         print(f"Received permission request: {request}")
