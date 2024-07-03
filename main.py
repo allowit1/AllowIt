@@ -77,24 +77,24 @@ def startup_db_client():
 
 
 # API endpoint to get system messages
-@app.get("/messages", response_model=List[Message])
-async def get_messages():
+@app.get("/messages/{email}", response_model=List[Message], tags=["messages"])
+async def get_messages(email : str):
     return messages
 
 # API endpoint to get recent permissions
-@app.get("/permissions", response_model=List[Permission])
-async def get_permissions():
+@app.get("/permissions/{email}", response_model=List[Permission])
+async def get_permissions(email:str):
     return permissions
 
 # API endpoint to get available applications
 @app.get("/applications", response_model=List[Application])
-async def get_applications():
+async def get_applications(email:str):
     return applications
 
 # API endpoint to submit a permission request
 # API endpoint to submit a permission request
 @app.post("/permission-request")
-async def submit_permission_request(request: PermissionRequest):
+async def submit_permission_request(request: PermissionRequest, email: str):
     try:
 
         # Process the permission request (in production, save to database)

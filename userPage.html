@@ -385,15 +385,10 @@
 
         // when the page is loaded the user information is displayed
         document.addEventListener("DOMContentLoaded", () => {
-            const userName = localStorage.getItem("userName");
-            const userEmail = localStorage.getItem("userEmail");
-            const userPosition = localStorage.getItem("userPosition");
-
             // if the user information is missing an alert is displayed
-            if (userEmail) {
+            if (email) {
                 document.getElementById("userName").textContent = userName;
                 document.getElementById("userEmail").textContent = userEmail;
-                document.getElementById("userPosition").textContent = userPosition;
             } else {
                 alert("User information is missing.");
                 // TODO: Redirect to sign-in page or another appropriate action.
@@ -443,7 +438,8 @@
         async function loadMessages() {
             try {
                 // fetch messages from the server
-                const response = await axios.get("http://127.0.0.1:5001/messages");
+                console.log(email);
+                const response = await axios.get(`http://127.0.0.1:5001/messages/${email}`);
                 const messages = response.data;
                 const messagesList = document.getElementById("messagesList");
                 messagesList.innerHTML = '';
@@ -463,7 +459,7 @@
         async function loadPermissions() {
             try {
                 // fetch permissions from the server
-                const response = await axios.get("http://127.0.0.1:5001/permissions");
+                const response = await axios.get(`http://127.0.0.1:5001/permissions/${email}`);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("permissionsList");
                 permissionsList.innerHTML = '';
@@ -516,7 +512,7 @@
         }
 
         // Submit permission request
-            async function submitPermissionRequest(event) {
+        async function submitPermissionRequest(event) {
         event.preventDefault();
         const applicationId = document.getElementById("application").value;
         const reason = document.getElementById("reason").value;
@@ -525,13 +521,13 @@
         const days = document.getElementById("days").value;
 
         try {
-            const response = await axios.post("http://127.0.0.1:5001/permission-request", {
+            const response = await axios.post(`http://127.0.0.1:5001/permission-request?email=${email}`, {
                 applicationId,
                 reason: reason || null,
                 urgency,
                 time: time || null,
                 days: days || null
-            });
+            }, {email});
             console.log("Permission Request Submitted:", response.data);
             // Reset form
             event.target.reset();
