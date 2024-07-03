@@ -516,32 +516,34 @@
         }
 
         // Submit permission request
-        async function submitPermissionRequest(event) {
-            event.preventDefault();
-            const applicationId = document.getElementById("application").value;
-            const reason = document.getElementById("reason").value;
-            const urgency = document.querySelector('input[name="urgency"]:checked').value;
-            const time = document.getElementById("time").value;
-            const days = document.getElementById("days").value;
+            async function submitPermissionRequest(event) {
+        event.preventDefault();
+        const applicationId = document.getElementById("application").value;
+        const reason = document.getElementById("reason").value;
+        const urgency = document.querySelector('input[name="urgency"]:checked').value;
+        const time = document.getElementById("time").value;
+        const days = document.getElementById("days").value;
 
-            try {
-                // send the permission request to the server
-                const response = await axios.post("http://127.0.0.1:5001/permission-request", {
-                    applicationId,
-                    reason,
-                    urgency,
-                    time,
-                    days
-                });
-                console.log("Permission Request Submitted:", response.data);
-                // Reset form
-                event.target.reset();
-                // Refresh permissions list
-                loadPermissions();
-            } catch (error) {
-                console.error('Error submitting permission request:', error);
+        try {
+            const response = await axios.post("http://127.0.0.1:5001/permission-request", {
+                applicationId,
+                reason: reason || null,
+                urgency,
+                time: time || null,
+                days: days || null
+            });
+            console.log("Permission Request Submitted:", response.data);
+            // Reset form
+            event.target.reset();
+            // Refresh permissions list
+            loadPermissions();
+        } catch (error) {
+            console.error('Error submitting permission request:', error);
+            if (error.response) {
+                console.error('Response data:', error.response.data);
             }
         }
+    }
     </script>
 </body>
 </html>

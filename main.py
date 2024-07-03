@@ -36,8 +36,8 @@ class PermissionRequest(BaseModel):
     applicationId: str
     reason: Optional[str] = None
     urgency: str
-    time: Optional[int] = None
-    days: Optional[int] = None
+    time: Optional[str] = None
+    days: Optional[str] = None
 
 # Sample data (replace with database in production)
 messages = [
@@ -78,16 +78,20 @@ async def get_applications():
 # API endpoint to submit a permission request
 @app.post("/permission-request")
 async def submit_permission_request(request: PermissionRequest):
-    # Process the permission request (in production, save to database)
-    print(f"Received permission request: {request}")
-    # Simulate adding a new permission
-    new_permission = Permission(
-        name=f"Access to Application {request.applicationId}",
-        status="Pending",
-        urgency=request.urgency
-    )
-    permissions.append(new_permission)
-    return {"status": "success", "message": "Permission request submitted successfully"}
+    try:
+        # Process the permission request (in production, save to database)
+        print(f"Received permission request: {request}")
+        # Simulate adding a new permission
+        new_permission = Permission(
+            name=f"Access to Application {request.applicationId}",
+            status="Pending",
+            urgency=request.urgency
+        )
+        permissions.append(new_permission)
+        return {"status": "success", "message": "Permission request submitted successfully"}
+    except Exception as e:
+        print(f"Error processing permission request: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
 
 # Root API endpoint
 @app.get("/")
