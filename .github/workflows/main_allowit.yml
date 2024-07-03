@@ -54,4 +54,4 @@ jobs:
           app-name: 'AllowIT'
           slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_211DE4C03961419BA383C6F737CD5646 }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AADF100ED1E741A0849FDBAAB38ACB9B }}
