@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
+    
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <style>
+        
         :root {
             --primary-color: #3498db;
             --secondary-color: #2c3e50;
@@ -311,6 +313,7 @@
 </head>
 <body>
     <header class="header">
+        <!-- this is the header of the page -->
         <div class="header-text">
             <img src="../images/logo.jpg" alt="AllowIt Logo" class="logo">
             <div class="user-info">
@@ -323,7 +326,9 @@
             <i class="fas fa-moon"></i>
         </button>
     </header>
+    <!-- this is the main content of the page -->
     <div class="container">
+        <!-- this is the first card of the page -->
         <div class="card messages-permissions">
             <div class="tab-container">
                 <button class="tab active" onclick="openTab(event, 'messages')">System Messages</button>
@@ -336,6 +341,7 @@
                 <ul id="permissionsList"></ul>
             </div>
         </div>
+        <!-- this is the second card of the page -->
         <div class="card applications">
             <h2>Applications</h2>
             <div class="search-bar">
@@ -343,6 +349,7 @@
             </div>
             <ul id="appList"></ul>
         </div>
+        <!-- this is the third card of the page -->
         <div class="card permission-request">
             <h2>Permission Request</h2>
             <form onsubmit="submitPermissionRequest(event)">
@@ -373,29 +380,34 @@
         </div>
     </div>
     <script>
+        // the email of the user is stored in the local storage
         const email = localStorage.getItem("userEmail");
 
+        // when the page is loaded the user information is displayed
         document.addEventListener("DOMContentLoaded", () => {
             const userName = localStorage.getItem("userName");
             const userEmail = localStorage.getItem("userEmail");
             const userPosition = localStorage.getItem("userPosition");
 
-            if (userName && userEmail) {
+            // if the user information is missing an alert is displayed
+            if (userEmail) {
                 document.getElementById("userName").textContent = userName;
                 document.getElementById("userEmail").textContent = userEmail;
                 document.getElementById("userPosition").textContent = userPosition;
             } else {
                 alert("User information is missing.");
-                // Redirect to sign-in page or another appropriate action.
+                // TODO: Redirect to sign-in page or another appropriate action.
             }
 
+            // load messages, permissions, and applications
             loadMessages();
             loadPermissions();
             loadApplications();
-            populateApplicationOptions();
         });
 
+        // function to open the tab between messages and permissions
         function openTab(event, tabId) {
+            
             const tabContent = document.querySelectorAll(".tab-content");
             const tabs = document.querySelectorAll(".tab");
 
@@ -406,10 +418,12 @@
             event.currentTarget.classList.add("active");
         }
 
+        // function to search for applications in the search bar
         function searchApplications() {
             const searchInput = document.getElementById("appSearch").value.toLowerCase();
             const appList = document.getElementById("appList").getElementsByTagName("li");
 
+            // loop through all list items, and hide those who don't match the search query
             for (let i = 0; i < appList.length; i++) {
                 const appName = appList[i].textContent.toLowerCase();
                 if (appName.includes(searchInput)) {
@@ -420,53 +434,79 @@
             }
         }
 
+        // function to toggle the dark mode
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
         }
 
-        function loadMessages() {
-            const messages = getMessages();
-            console.log(messages);
-            const messagesList = document.getElementById("messagesList");
-            messagesList.innerHTML = '';
-            messages.forEach(message => {
-                const li = document.createElement("li");
-                li.textContent = message;
-                messagesList.appendChild(li);
-            });
+        // function to load the messages
+        async function loadMessages() {
+            try {
+                // fetch messages from the server
+                const response = await axios.get("http://127.0.0.1:5001/messages");
+                const messages = response.data;
+                const messagesList = document.getElementById("messagesList");
+                messagesList.innerHTML = '';
+                
+                // loop through the messages and display them
+                messages.forEach(message => {
+                    const li = document.createElement("li");
+                    li.textContent = message.content;
+                    messagesList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error fetching messages:', error);
+            }
         }
 
-        function loadPermissions() {
-            const permissions = getPermissions();
-            const permissionsList = document.getElementById("permissionsList");
-            permissionsList.innerHTML = '';
-            permissions.forEach(permission => {
-                const li = document.createElement("li");
-                const statusClass = permission.status.toLowerCase();
-                li.innerHTML = `${permission.name} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
-                permissionsList.appendChild(li);
-            });
+        // function to load the permissions
+        async function loadPermissions() {
+            try {
+                // fetch permissions from the server
+                const response = await axios.get("http://127.0.0.1:5001/permissions");
+                const permissions = response.data;
+                const permissionsList = document.getElementById("permissionsList");
+                permissionsList.innerHTML = '';
+
+                // loop through the permissions and display them
+                permissions.forEach(permission => {
+                    const li = document.createElement("li");
+                    const statusClass = permission.status.toLowerCase();
+                    li.innerHTML = `${permission.name} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
+                    permissionsList.appendChild(li);
+                });
+            } catch (error) {
+                console.error('Error fetching permissions:', error);
+            }
         }
 
-        function loadApplications() {
-            const applications = getApplications();
-            const appList = document.getElementById("appList");
-            appList.innerHTML = '';
-            applications.forEach(app => {
-                const li = document.createElement("li");
-                li.innerHTML = `<a href="${app.href}" class="app-link" target=_blank"><img src="${app.icon}" alt="${app.name} Icon" class="app-icon"> ${app.name}</a>`;
-                appList.appendChild(li);
-            });
+        // function to load the applications
+        async function loadApplications() {
+            try {
+                // fetch applications from the server
+                const response = await axios.get("http://127.0.0.1:5001/applications");
+                const applications = response.data;
+                const appList = document.getElementById("appList");
+                appList.innerHTML = '';
+
+                // loop through the applications and display them
+                applications.forEach(app => {
+                    const li = document.createElement("li");
+                    li.innerHTML = `<a href="${app.href}" class="app-link" target="_blank"><img src="${app.icon}" alt="${app.name} Icon" class="app-icon"> ${app.name}</a>`;
+                    appList.appendChild(li);
+                });
+                populateApplicationOptions(applications);
+            } catch (error) {
+                console.error('Error fetching applications:', error);
+            }
         }
 
-        function populateApplicationOptions() {
-            const applications = getApplications();
+        // Populate application options in permission request form
+        function populateApplicationOptions(applications) {
             const applicationSelect = document.getElementById("application");
-            applicationSelect.innerHTML = '';
-            const defaultOption = document.createElement("option");
-            defaultOption.value = '';
-            defaultOption.textContent = 'Choose an application';
-            applicationSelect.appendChild(defaultOption);
+            applicationSelect.innerHTML = '<option value="">Choose an application</option>';
+
+            // loop through the applications and display them in the select dropdown
             applications.forEach(app => {
                 const option = document.createElement("option");
                 option.value = app.id;
@@ -475,7 +515,8 @@
             });
         }
 
-        function submitPermissionRequest(event) {
+        // Submit permission request
+        async function submitPermissionRequest(event) {
             event.preventDefault();
             const applicationId = document.getElementById("application").value;
             const reason = document.getElementById("reason").value;
@@ -483,56 +524,23 @@
             const time = document.getElementById("time").value;
             const days = document.getElementById("days").value;
 
-            // Simulating sending request to server
-            console.log("Permission Request Submitted:");
-            console.log("Application ID:", applicationId);
-            console.log("Reason:", reason || "Not provided");
-            console.log("Urgency:", urgency);
-            console.log("Time (hours):", time || "Not provided");
-            console.log("Days:", days || "Not provided");
-
-            document.getElementById("application").value = '';
-        
-            defaultOption.textContent = 'Choose an application';
-            document.getElementById("reason").value = '';
-            document.querySelector('input[name="urgency"][value="low"]').checked = true;
-            document.getElementById("time").value = '';
-            document.getElementById("days").value = '';
-
-
-
-            // Refresh permissions list
-            loadPermissions();
-        }
-
-        function getMessages() {
-            return axios.get("http://127.0.0.1:8000/messages")
-        .then(response => response.data)
-        .catch(error => {
-            console.error('Error fetching messages:', error);
-            return [];
-        });
-        }
-
-        function getPermissions() {
-            // Placeholder function for getting permissions
-            return [
-                { name: "HR System Access", status: "Approved", urgency: "High", timeRemaining: "(5 days remaining)" },
-                { name: "Development Server Access", status: "Approved", urgency: "Medium", timeRemaining: "(2 days remaining)" },
-                { name: "Admin Dashboard", status: "Pending", urgency: "Low" },
-                { name: "Finance Data Access", status: "Denied", urgency: "High" }
-            ];
-        }
-
-        function getApplications() {
-            // Placeholder function for getting applications
-            return [
-                { id: "app1", name: "Application 1", icon: "../images/app-icon.png", href: "https://github.com/" },
-                { id: "app2", name: "Application 2", icon: "../images/app-icon.png", href: "https://github.com/" },
-                { id: "app3", name: "Application 3", icon: "../images/app-icon.png", href: "https://github.com/" },
-                { id: "app4", name: "Application 4", icon: "../images/app-icon.png", href: "https://github.com/" },
-                { id: "app5", name: "Application 5", icon: "../images/app-icon.png", href: "https://github.com/" }
-            ];
+            try {
+                // send the permission request to the server
+                const response = await axios.post("http://127.0.0.1:5001/permission-request", {
+                    applicationId,
+                    reason,
+                    urgency,
+                    time,
+                    days
+                });
+                console.log("Permission Request Submitted:", response.data);
+                // Reset form
+                event.target.reset();
+                // Refresh permissions list
+                loadPermissions();
+            } catch (error) {
+                console.error('Error submitting permission request:', error);
+            }
         }
     </script>
 </body>
