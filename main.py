@@ -24,7 +24,7 @@ class Message(BaseModel):
     content: str
 
 class Permission(BaseModel):
-    mail: str 
+    mail: str
     name: str
     status: str
     urgency: str
@@ -102,6 +102,7 @@ async def submit_permission_request(request: PermissionRequest, email: str):
         
         # Simulate adding a new permission
         new_permission = Permission(
+            mail=None,
             name=f"Access to Application {request.applicationId}",  # Ensure the 'name' field is provided
             status="Pending",
             urgency=request.urgency,
