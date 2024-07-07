@@ -1,0 +1,81 @@
+/* adminPage.css */
+
+.container {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+}
+
+.user-management {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+}
+
+.permission-levels {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.permission-requests {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.approved-permissions {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+
+.card {
+    max-height: calc(100vh - 150px);
+    overflow-y: auto;
+}
+
+#userList li {
+    cursor: pointer;
+}
+
+.app-permissions {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.app-permissions h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+}
+
+.app-permissions label {
+    display: block;
+    margin-bottom: 5px;
+}
+
+@media (max-width: 1200px) {
+    .container {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .user-management {
+        grid-column: 1 / span 2;
+        grid-row: 3;
+    }
+
+    .permission-levels, .permission-requests, .approved-permissions {
+        grid-column: auto;
+        grid-row: auto;
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .user-management, .permission-levels, .permission-requests, .approved-permissions {
+        grid-column: 1;
+        grid-row: auto;
+    }
+}
