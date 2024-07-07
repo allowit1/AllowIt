@@ -71,7 +71,7 @@
                 </div>
                 <div class="form-group">
                     <label for="newUserPhone">Phone:</label>
-                    <input type="tel" id="newUserPhone" required>
+                    <input type="tel" id="newUserPhone">
                 </div>
                 <div class="form-group">
                     <label for="newUserLevel">Permission Level:</label>
@@ -98,7 +98,7 @@
                 </div>
                 <div class="form-group">
                     <label for="editUserPhone">Phone:</label>
-                    <input type="tel" id="editUserPhone" required>
+                    <input type="tel" id="editUserPhone">
                 </div>
                 <div class="form-group">
                     <label for="editUserLevel">Permission Level:</label>
@@ -169,28 +169,36 @@
     </div>
 
     <script>
-        // Admin information
-        const adminName = "Admin User";
-        const adminEmail = "admin@allowit.com";
+        const adminEmail = localStorage.getItem("userEmail");
 
-        // When the page loads
-        document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById("adminName").textContent = adminName;
-            document.getElementById("adminEmail").textContent = adminEmail;
+        document.addEventListener("DOMContentLoaded", async () => {
+            try {
+                const response = await axios.get(`http://127.0.0.1:5001/user-details/${adminEmail}`);
+                const adminData = response.data;
 
-            loadUsers();
-            loadPermissionLevels();
-            loadPendingRequests();
-            loadApprovedPermissions();
-            populatePermissionLevelSelect();
+                if (!adminData.isAdmin) {
+                    throw new Error("User is not an admin");
+                }
+
+                document.getElementById("adminName").textContent = adminData.name;
+                document.getElementById("adminEmail").textContent = adminEmail;
+
+                await loadUsers();
+                await loadPermissionLevels();
+                await loadPendingRequests();
+                await loadApprovedPermissions();
+                await populatePermissionLevelSelect();
+            } catch (error) {
+                console.error("Error loading admin page:", error);
+                alert("Error loading admin page. Please log in again.");
+                window.location.href = 'loginPage.html';
+            }
         });
 
-        // Function to toggle dark mode
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
         }
 
-        // Function to open modal
         function openModal(modalId) {
             document.getElementById(modalId).style.display = "block";
             if (modalId === 'newLevelModal') {
@@ -198,12 +206,10 @@
             }
         }
 
-        // Function to close modal
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = "none";
         }
 
-        // Function to search users
         function searchUsers() {
             const searchInput = document.getElementById("userSearch").value.toLowerCase();
             const userList = document.getElementById("userList").getElementsByTagName("li");
@@ -218,10 +224,10 @@
             }
         }
 
-        // Function to load users
         async function loadUsers() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/users");
+                const adminEmail = localStorage.getItem("userEmail");
+                const response = await axios.get(`http://127.0.0.1:5001/users?admin_email=${adminEmail}`);
                 const users = response.data;
                 const userList = document.getElementById("userList");
                 userList.innerHTML = '';
@@ -236,18 +242,47 @@
                 console.error('Error fetching users:', error);
             }
         }
-       
 
-        // Function to edit user
+        async function addUser(event) {
+            event.preventDefault();
+            const name = document.getElementById("newUserName").value;
+            const email = document.getElementById("newUserEmail").value;
+            const phone = document.getElementById("newUserPhone").value;
+            const level = document.getElementById("newUserLevel").value;
+
+            try {
+                const adminEmail = localStorage.getItem("userEmail");
+                const response = await axios.post(`http://127.0.0.1:5001/users?admin_email=${adminEmail}`, {
+                    name: name,
+                    email: email,
+                    phone: phone,
+                    permissionLevel: level,
+                    isAdmin: false
+                });
+                
+                console.log("User added successfully:", response.data);
+                closeModal('newUserModal');
+                await loadUsers();
+            } catch (error) {
+                console.error('Error adding new user:', error);
+                if (error.response) {
+                    console.error('Server error response:', error.response.data);
+                    alert(`Failed to add user: ${error.response.data.detail || 'Unknown error'}`);
+                }
+            }
+        }
+
+document.getElementById("newUserForm").addEventListener("submit", addUser);
+
         async function editUser(userId) {
             try {
-                const response = await axios.get(`http://127.0.0.1:5001/users/${userId}`);
+                const response = await axios.get(`http://127.0.0.1:5001/users/${userId}?admin_email=${adminEmail}`);
                 const user = response.data;
                 
                 document.getElementById('editUserId').value = user.id;
                 document.getElementById('editUserName').value = user.name;
                 document.getElementById('editUserEmail').value = user.email;
-                document.getElementById('editUserPhone').value = user.phone;
+                document.getElementById('editUserPhone').value = user.phone || '';
                 document.getElementById('editUserLevel').value = user.permissionLevel;
                 
                 openModal('editUserModal');
@@ -256,25 +291,22 @@
             }
         }
 
-
-        // Function to delete user
         async function deleteUser() {
             const userId = document.getElementById('editUserId').value;
             if (confirm('Are you sure you want to delete this user?')) {
                 try {
-                    await axios.delete(`http://127.0.0.1:5001/users/${userId}`).then(() =>
-                    closeModal('editUserModal'),
-                    loadUsers());
+                    await axios.delete(`http://127.0.0.1:5001/users/${userId}?admin_email=${adminEmail}`);
+                    closeModal('editUserModal');
+                    await loadUsers();
                 } catch (error) {
                     console.error('Error deleting user:', error);
                 }
             }
         }
 
-        // Function to load permission levels
         async function loadPermissionLevels() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/permission-levels");
+                const response = await axios.get(`http://127.0.0.1:5001/permission-levels?admin_email=${adminEmail}`);
                 const levels = response.data;
                 const levelList = document.getElementById("levelList");
                 levelList.innerHTML = '';
@@ -286,16 +318,15 @@
                     levelList.appendChild(li);
                 });
 
-                populatePermissionLevelSelect();
+                await populatePermissionLevelSelect();
             } catch (error) {
                 console.error('Error fetching permission levels:', error);
             }
         }
 
-        // Function to fetch applications
         async function fetchApplications() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/applications");
+                const response = await axios.get(`http://127.0.0.1:5001/applications?admin_email=${adminEmail}`);
                 return response.data;
             } catch (error) {
                 console.error('Error fetching applications:', error);
@@ -303,7 +334,6 @@
             }
         }
 
-        // Function to populate app permissions in modal
         async function populateAppPermissions(containerId, selectedPermissions = {}) {
             const applications = await fetchApplications();
             const container = document.getElementById(containerId);
@@ -325,10 +355,9 @@
             });
         }
 
-        // Function to open update level modal
         async function openUpdateLevelModal(levelId) {
             try {
-                const response = await axios.get(`http://127.0.0.1:5001/permission-levels/${levelId}`);
+                const response = await axios.get(`http://127.0.0.1:5001/permission-levels/${levelId}?admin_email=${adminEmail}`);
                 const level = response.data;
                 
                 document.getElementById('updateLevelId').value = level.id;
@@ -342,24 +371,22 @@
             }
         }
 
-        // Function to delete permission level
-        function deletePermissionLevel() {
+        async function deletePermissionLevel() {
             const levelId = document.getElementById('updateLevelId').value;
             if (confirm('Are you sure you want to delete this permission level?')) {
-                axios.delete(`http://127.0.0.1:5001/permission-levels/${levelId}`)
-                    .then(() => {
-                        closeModal('updateLevelModal');
-                        loadPermissionLevels();
-                    })
-                    .catch(error => console.error('Error deleting permission level:', error));
+                try {
+                    await axios.delete(`http://127.0.0.1:5001/permission-levels/${levelId}?admin_email=${adminEmail}`);
+                    closeModal('updateLevelModal');
+                    await loadPermissionLevels();
+                } catch (error) {
+                    console.error('Error deleting permission level:', error);
+                }
             }
         }
 
-
-        // Function to load pending requests
         async function loadPendingRequests() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/pending-requests");
+                const response = await axios.get(`http://127.0.0.1:5001/pending-requests?admin_email=${adminEmail}`);
                 const requests = response.data;
                 const pendingRequestsList = document.getElementById("pendingRequestsList");
                 pendingRequestsList.innerHTML = '';
@@ -377,35 +404,32 @@
             }
         }
 
-        // Function to open request modal
         function openRequestModal(requestId) {
             document.getElementById('requestId').value = requestId;
             openModal('requestModal');
         }
 
-        // Function to handle request
         async function handleRequest(action) {
             const requestId = document.getElementById('requestId').value;
             const reason = document.getElementById('adminReason').value;
             const expiryTime = document.getElementById('expiryTime').value;
 
             try {
-                await axios.post(`http://127.0.0.1:5001/${action}-request/${requestId}`, {
+                await axios.post(`http://127.0.0.1:5001/${action}-request/${requestId}?admin_email=${adminEmail}`, {
                     reason: reason,
                     expiryTime: parseInt(expiryTime)
                 });
                 closeModal('requestModal');
-                loadPendingRequests();
-                loadApprovedPermissions();
+                await loadPendingRequests();
+                await loadApprovedPermissions();
             } catch (error) {
                 console.error(`Error ${action}ing request:`, error);
             }
         }
 
-        // Function to load approved permissions
         async function loadApprovedPermissions() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/approved-permissions");
+                const response = await axios.get(`http://127.0.0.1:5001/approved-permissions?admin_email=${adminEmail}`);
                 const permissions = response.data;
                 const approvedPermissionsList = document.getElementById("approvedPermissionsList");
                 approvedPermissionsList.innerHTML = '';
@@ -424,22 +448,20 @@
             }
         }
 
-        // Function to revoke permission
         async function revokePermission(permissionId) {
             if (confirm('Are you sure you want to revoke this permission?')) {
                 try {
-                    await axios.post(`http://127.0.0.1:5001/revoke-permission/${permissionId}`);
-                    loadApprovedPermissions();
+                    await axios.post(`http://127.0.0.1:5001/revoke-permission/${permissionId}?admin_email=${adminEmail}`);
+                    await loadApprovedPermissions();
                 } catch (error) {
                     console.error('Error revoking permission:', error);
                 }
             }
         }
 
-        // Function to populate permission level select
         async function populatePermissionLevelSelect() {
             try {
-                const response = await axios.get("http://127.0.0.1:5001/permission-levels");
+                const response = await axios.get(`http://127.0.0.1:5001/permission-levels?admin_email=${adminEmail}`);
                 const levels = response.data;
                 const newUserLevel = document.getElementById("newUserLevel");
                 const editUserLevel = document.getElementById("editUserLevel");
@@ -458,24 +480,8 @@
             }
         }
 
-        // Event listener for new user form submission
-        document.getElementById("newUserForm").addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const name = document.getElementById("newUserName").value;
-            const email = document.getElementById("newUserEmail").value;
-            const phone = document.getElementById("newUserPhone").value;
-            const level = document.getElementById("newUserLevel").value;
+        document.getElementById("newUserForm").addEventListener("submit", addUser);
 
-            try {
-                await axios.post("http://127.0.0.1:5001/users", { name, email, phone, permissionLevel: level });
-                closeModal('newUserModal');
-                loadUsers();
-            } catch (error) {
-                console.error('Error adding new user:', error);
-            }
-        });
-
-        // Event listener for edit user form submission
         document.getElementById("editUserForm").addEventListener("submit", async (event) => {
             event.preventDefault();
             const id = document.getElementById("editUserId").value;
@@ -485,15 +491,23 @@
             const level = document.getElementById("editUserLevel").value;
 
             try {
-                await axios.put(`http://127.0.0.1:5001/users/${id}`, { name, email, phone, permissionLevel: level });
+                await axios.put(`http://127.0.0.1:5001/users/${id}?admin_email=${adminEmail}`, { 
+                    name, 
+                    email, 
+                    phone, 
+                    permissionLevel: level
+                });
                 closeModal('editUserModal');
-                loadUsers();
+                await loadUsers();
             } catch (error) {
                 console.error('Error updating user:', error);
+                if (error.response) {
+                    console.error('Server error response:', error.response.data);
+                    alert(`Failed to update user: ${error.response.data.detail || 'Unknown error'}`);
+                }
             }
         });
 
-        // Event listener for new level form submission
         document.getElementById("newLevelForm").addEventListener("submit", async (event) => {
             event.preventDefault();
             const name = document.getElementById("newLevelName").value;
@@ -507,15 +521,18 @@
             });
 
             try {
-                await axios.post("http://127.0.0.1:5001/permission-levels", { name, permissions });
+                await axios.post(`http://127.0.0.1:5001/permission-levels?admin_email=${adminEmail}`, { name, permissions });
                 closeModal('newLevelModal');
-                loadPermissionLevels();
+                await loadPermissionLevels();
             } catch (error) {
                 console.error('Error adding new permission level:', error);
+                if (error.response) {
+                    console.error('Server error response:', error.response.data);
+                    alert(`Failed to add permission level: ${error.response.data.detail || 'Unknown error'}`);
+                }
             }
         });
 
-        // Event listener for update level form submission
         document.getElementById("updateLevelForm").addEventListener("submit", async (event) => {
             event.preventDefault();
             const id = document.getElementById("updateLevelId").value;
@@ -530,26 +547,23 @@
             });
 
             try {
-                await axios.put(`http://127.0.0.1:5001/permission-levels/${id}`, { name, permissions });
+                await axios.put(`http://127.0.0.1:5001/permission-levels/${id}?admin_email=${adminEmail}`, { name, permissions });
                 closeModal('updateLevelModal');
-                loadPermissionLevels();
+                await loadPermissionLevels();
             } catch (error) {
                 console.error('Error updating permission level:', error);
+                if (error.response) {
+                    console.error('Server error response:', error.response.data);
+                    alert(`Failed to update permission level: ${error.response.data.detail || 'Unknown error'}`);
+                }
             }
         });
 
-        // Close modal when clicking outside of it
         window.onclick = function(event) {
             if (event.target.className === 'modal') {
                 event.target.style.display = "none";
             }
         }
-
-        // Initial load of data
-        loadUsers();
-        loadPermissionLevels();
-        loadPendingRequests();
-        loadApprovedPermissions();
     </script>
 </body>
 </html>

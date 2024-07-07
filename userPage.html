@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
-    
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>User Dashboard - AllowIt</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
@@ -13,12 +12,12 @@
 </head>
 <body>
     <header class="header">
-        <!-- this is the header of the page -->
         <div class="header-text">
             <img src="../images/logo.jpg" alt="AllowIt Logo" class="logo">
             <div class="user-info">
                 <p><strong>Name:</strong> <span id="userName"></span></p>
                 <p><strong>Email:</strong> <span id="userEmail"></span></p>
+                <p><strong>Company:</strong> <span id="userCompany"></span></p>
                 <p><strong>Position:</strong> <span id="userPosition"></span></p>
             </div>
         </div>
@@ -26,9 +25,8 @@
             <i class="fas fa-moon"></i>
         </button>
     </header>
-    <!-- this is the main content of the page -->
+
     <div class="container">
-        <!-- this is the first card of the page -->
         <div class="card messages-permissions">
             <div class="tab-container">
                 <button class="tab active" onclick="openTab(event, 'messages')">System Messages</button>
@@ -41,7 +39,7 @@
                 <ul id="permissionsList"></ul>
             </div>
         </div>
-        <!-- this is the second card of the page -->
+
         <div class="card applications">
             <h2>Applications</h2>
             <div class="search-bar">
@@ -49,7 +47,7 @@
             </div>
             <ul id="appList"></ul>
         </div>
-        <!-- this is the third card of the page -->
+
         <div class="card permission-request">
             <h2>Permission Request</h2>
             <form onsubmit="submitPermissionRequest(event)">
@@ -87,30 +85,60 @@
             </form>
         </div>
     </div>
+
     <script>
-        // the email of the user is stored in the local storage
-        const email = localStorage.getItem("userEmail");
+        document.addEventListener("DOMContentLoaded", async () => {
+            const userEmail = localStorage.getItem("userEmail");
+            console.log("User email from localStorage:", userEmail);
 
-        // when the page is loaded the user information is displayed
-        document.addEventListener("DOMContentLoaded", () => {
-            // if the user information is missing an alert is displayed
-            if (email) {
-                document.getElementById("userName").textContent = userName;
-                document.getElementById("userEmail").textContent = userEmail;
+            if (userEmail) {
+                try {
+                    console.log("Attempting to fetch user details for email:", userEmail);
+                    const response = await axios.get(`http://127.0.0.1:5001/user-details/${userEmail}`);
+                    console.log("Raw response from server:", response);
+                    
+                    const user = response.data;
+                    console.log("User data received:", user);
+
+                    if (!user || Object.keys(user).length === 0) {
+                        throw new Error("User data is empty or missing.");
+                    }
+
+                    const userNameElement = document.getElementById("userName");
+                    const userEmailElement = document.getElementById("userEmail");
+                    const userCompanyElement = document.getElementById("userCompany");
+                    const userPositionElement = document.getElementById("userPosition");
+
+                    if (userNameElement) userNameElement.textContent = user.name || "N/A";
+                    if (userEmailElement) userEmailElement.textContent = userEmail;
+                    if (userCompanyElement) userCompanyElement.textContent = user.company || "N/A";
+                    if (userPositionElement) userPositionElement.textContent = user.position || "N/A";
+
+                    await loadMessages();
+                    await loadPermissions();
+                    await loadApplications();
+                } catch (error) {
+                    console.error("Error fetching user details:", error);
+                    if (error.response) {
+                        console.error("Response data:", error.response.data);
+                        console.error("Response status:", error.response.status);
+                        console.error("Response headers:", error.response.headers);
+                    } else if (error.request) {
+                        console.error("No response received:", error.request);
+                    } else {
+                        console.error('Error', error.message);
+                    }
+                    alert("Error fetching user information. Please try logging in again.");
+                    window.location.href = 'loginPage.html';
+                }
             } else {
-                alert("User information is missing.");
-                // TODO: Redirect to sign-in page or another appropriate action.
+                console.error("User email is missing in localStorage");
+                alert("User email is missing. Please log in again.");
+                window.location.href = 'loginPage.html';
             }
-
-            // load messages, permissions, and applications
-            loadMessages();
-            loadPermissions();
-            loadApplications();
         });
 
-        // function to open the tab between messages and permissions
         function openTab(event, tabId) {
-            
             const tabContent = document.querySelectorAll(".tab-content");
             const tabs = document.querySelectorAll(".tab");
 
@@ -121,12 +149,10 @@
             event.currentTarget.classList.add("active");
         }
 
-        // function to search for applications in the search bar
         function searchApplications() {
             const searchInput = document.getElementById("appSearch").value.toLowerCase();
             const appList = document.getElementById("appList").getElementsByTagName("li");
 
-            // loop through all list items, and hide those who don't match the search query
             for (let i = 0; i < appList.length; i++) {
                 const appName = appList[i].textContent.toLowerCase();
                 if (appName.includes(searchInput)) {
@@ -137,22 +163,18 @@
             }
         }
 
-        // function to toggle the dark mode
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
         }
 
-        // function to load the messages
         async function loadMessages() {
             try {
-                // fetch messages from the server
-                console.log(email);
-                const response = await axios.get(`http://127.0.0.1:5001/messages/${email}`);
+                const userEmail = localStorage.getItem("userEmail");
+                const response = await axios.get(`http://127.0.0.1:5001/messages/${userEmail}`);
                 const messages = response.data;
                 const messagesList = document.getElementById("messagesList");
                 messagesList.innerHTML = '';
                 
-                // loop through the messages and display them
                 messages.forEach(message => {
                     const li = document.createElement("li");
                     li.textContent = message.content;
@@ -163,20 +185,18 @@
             }
         }
 
-        // function to load the permissions
         async function loadPermissions() {
             try {
-                // fetch permissions from the server
-                const response = await axios.get(`http://127.0.0.1:5001/permissions/${email}`);
+                const userEmail = localStorage.getItem("userEmail");
+                const response = await axios.get(`http://127.0.0.1:5001/permissions/${userEmail}`);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("permissionsList");
                 permissionsList.innerHTML = '';
 
-                // loop through the permissions and display them
                 permissions.forEach(permission => {
                     const li = document.createElement("li");
                     const statusClass = permission.status.toLowerCase();
-                    li.innerHTML = `${permission.name} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
+                    li.innerHTML = `${permission.application} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
                     permissionsList.appendChild(li);
                 });
             } catch (error) {
@@ -184,16 +204,14 @@
             }
         }
 
-        // function to load the applications
         async function loadApplications() {
             try {
-                // fetch applications from the server
-                const response = await axios.get("http://127.0.0.1:5001/applications");
+                const userEmail = localStorage.getItem("userEmail");
+                const response = await axios.get(`http://127.0.0.1:5001/applications?email=${userEmail}`);
                 const applications = response.data;
                 const appList = document.getElementById("appList");
                 appList.innerHTML = '';
 
-                // loop through the applications and display them
                 applications.forEach(app => {
                     const li = document.createElement("li");
                     li.innerHTML = `<a href="${app.href}" class="app-link" target="_blank"><img src="${app.icon}" alt="${app.name} Icon" class="app-icon"> ${app.name}</a>`;
@@ -205,12 +223,37 @@
             }
         }
 
-        // Populate application options in permission request form
+        async function submitPermissionRequest(event) {
+            event.preventDefault();
+            const applicationId = document.getElementById("application").value;
+            const reason = document.getElementById("reason").value;
+            const urgency = document.querySelector('input[name="urgency"]:checked').value;
+            const time = document.getElementById("time").value;
+            const days = document.getElementById("days").value;
+
+            try {
+                const userEmail = localStorage.getItem("userEmail");
+                const response = await axios.post(`http://127.0.0.1:5001/permission-request`, {
+                    applicationId,
+                    reason: reason || null,
+                    urgency,
+                    time: time || null,
+                    days: days || null
+                }, { params: { email: userEmail } });
+                console.log("Permission Request Submitted:", response.data);
+                event.target.reset();
+                await loadPermissions();
+            } catch (error) {
+                console.error('Error submitting permission request:', error);
+                if (error.response) {
+                    console.error('Response data:', error.response.data);
+                }
+            }
+        }
+
         function populateApplicationOptions(applications) {
             const applicationSelect = document.getElementById("application");
             applicationSelect.innerHTML = '<option value="">Choose an application</option>';
-
-            // loop through the applications and display them in the select dropdown
             applications.forEach(app => {
                 const option = document.createElement("option");
                 option.value = app.id;
@@ -218,36 +261,6 @@
                 applicationSelect.appendChild(option);
             });
         }
-
-        // Submit permission request
-        async function submitPermissionRequest(event) {
-        event.preventDefault();
-        const applicationId = document.getElementById("application").value;
-        const reason = document.getElementById("reason").value;
-        const urgency = document.querySelector('input[name="urgency"]:checked').value;
-        const time = document.getElementById("time").value;
-        const days = document.getElementById("days").value;
-
-        try {
-            const response = await axios.post(`http://127.0.0.1:5001/permission-request?email=${email}`, {
-                applicationId,
-                reason: reason || null,
-                urgency,
-                time: time || null,
-                days: days || null
-            }, {email});
-            console.log("Permission Request Submitted:", response.data);
-            // Reset form
-            event.target.reset();
-            // Refresh permissions list
-            loadPermissions();
-        } catch (error) {
-            console.error('Error submitting permission request:', error);
-            if (error.response) {
-                console.error('Response data:', error.response.data);
-            }
-        }
-    }
     </script>
 </body>
 </html>
