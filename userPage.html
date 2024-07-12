@@ -182,6 +182,7 @@
         // Load messages from the server
         async function loadMessages() {
             try {
+                console.log("Fetching messages for user:", userEmail, "from server", `${API_BASE_URL}/messages/${userEmail}`);
                 const response = await axios.get(`${API_BASE_URL}/messages/${userEmail}`);
                 const messages = response.data;
                 const messagesList = document.getElementById("messagesList");
