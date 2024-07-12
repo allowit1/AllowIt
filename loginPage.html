@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Secure login page for AllowIt - Manage access permissions easily">
     <title>Sign In - AllowIt</title>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jwt-decode@3.1.2/build/jwt-decode.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/loginPage.css">
@@ -31,10 +33,11 @@
              data-logo_alignment="left">
         </div>
         <div id="user-info"></div>
+        <div id="loading" style="display: none;">Loading...</div>
     </div>
 
     <button class="help-button" onclick="toggleHelpPopup()">
-        <img class="help-icon" src="../images/help-icon.png" alt="Help Icon" style="width: 30px; height: 30px;"/>
+        <img class="help-icon" src="../images/help-icon.png" alt="Help Icon" style="width: 30px; height: 30px;">
     </button>
 
     <div class="help-popup" id="helpPopup">
@@ -42,50 +45,95 @@
     </div>
 
     <script>
+        // The base URL for the API server
+        const API_BASE_URL= "http://127.0.0.1:5001";
+
+        // Handle the credential response from Google
         function handleCredentialResponse(response) {
             console.log("Credential response received:", response);
             if (response.credential) {
-                const payload = JSON.parse(atob(response.credential.split('.')[1]));
-                const userName = payload.name;
-                const userEmail = payload.email;
+                try {
+                    const payload = jwt_decode(response.credential);
+                    const userEmail = payload.email;
 
-                if (userName && userEmail) {
-                    fetchUserDetails(userEmail, userName);
-                } else {
-                    console.warn("User details not found in response.");
+                    if (userEmail) {
+                        console.log("User details found in response:", userEmail);
+                        fetchUserDetails(userEmail);
+                    } else {
+                        showError("User details not found in response.");
+                    }
+                } catch (error) {
+                    showError("Error decoding credential response.");
                 }
             } else {
-                console.error("Error: No credential received");
+                showError("No credential received");
             }
         }
 
-        async function fetchUserDetails(email, name) {
+        // Fetch the user details from the server
+        async function fetchUserDetails(email) {
+            showLoading(true);
             try {
-                const response = await axios.get(`http://127.0.0.1:5001/user-details/${email}`);
-                const userData = response.data;
+                console.log("Attempting to fetch user details for:", email);
+                const response = await axios.get(`${API_BASE_URL}/user-details/${email}`);
+                console.log("Response received:", response);
+                localStorage.setItem("userEmail", email);
 
-                localStorage.setItem('userEmail', email);
-
-                if (userData.isAdmin) {
-                    window.location.href = '../adminPage.html';
-                } else {
-                    window.location.href = '../userPage.html';
+                if (!response.data) {
+                    throw new Error("No data received from server");
                 }
+
+                if (response.data.isAdmin) {
+                    redirectTo("adminPage");
+                } else {
+                    redirectTo("userPage");
+                }
+                
             } catch (error) {
-                console.error("Error fetching user details:", error);
-                alert(`Error logging in: ${error.message}`);
+                console.error("Detailed error:", error);
+                if (error.response) {
+                    console.error("Error data:", error.response.data);
+                    console.error("Error status:", error.response.status);
+                    console.error("Error headers:", error.response.headers);
+                } else if (error.request) {
+                    console.error("No response received:", error.request);
+                } else {
+                    console.error('Error message:', error.message);
+                }
+                showError(`Error logging in: ${error.message}`);
+            } finally {
+                showLoading(false);
             }
         }
 
-        function toggleHelpPopup() {
-            var helpPopup = document.getElementById('helpPopup');
-            helpPopup.classList.toggle('active');
+        // Redirect to the specified page
+        function redirectTo(page) {
+            window.location.href = `${page}.html`;
         }
 
+        // Display an error message to the user
+        function showError(message) {
+            const userInfo = document.getElementById("user-info");
+            userInfo.textContent = message;
+            userInfo.style.color = "red";
+        }
+
+        // Display or hide the loading message
+        function showLoading(isLoading) {
+            document.getElementById("loading").style.display = isLoading ? "block" : "none";
+        }
+
+        // Toggle the help popup
+        function toggleHelpPopup() {
+            var helpPopup = document.getElementById("helpPopup");
+            helpPopup.classList.toggle("active");
+        }
+
+        // Close the help popup if the user clicks outside it
         window.onclick = function(event) {
-            var helpPopup = document.getElementById('helpPopup');
-            if (event.target !== helpPopup && !helpPopup.contains(event.target) && event.target.className !== 'help-button' && !event.target.closest('.help-button')) {
-                helpPopup.classList.remove('active');
+            var helpPopup = document.getElementById("helpPopup");
+            if (event.target !== helpPopup && !helpPopup.contains(event.target) && event.target.className !== "help-button" && !event.target.closest(".help-button")) {
+                helpPopup.classList.remove("active");
             }
         }
     </script>
