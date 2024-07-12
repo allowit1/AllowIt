@@ -178,7 +178,7 @@
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
         }
-
+        
         // Load messages from the server
         async function loadMessages() {
             try {
@@ -190,7 +190,7 @@
                 
                 messages.forEach(message => {
                     const li = document.createElement("li");
-                    li.textContent = message.content;
+                    li.textContent = message;  // Changed from message.content to message
                     messagesList.appendChild(li);
                 });
             } catch (error) {
@@ -201,26 +201,69 @@
         async function loadPermissions() {
             try {
                 const userEmail = localStorage.getItem("userEmail");
+                console.log(`Fetching permissions for user: ${userEmail}`);
                 const response = await axios.get(`${API_BASE_URL}/permissions/${userEmail}`);
+                console.log("Permissions response:", response.data);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("permissionsList");
                 permissionsList.innerHTML = '';
 
+                if (permissions.length === 0) {
+                    permissionsList.innerHTML = '<li class="no-permissions">No permissions found. 🔍</li>';
+                    return;
+                }
+
+                const ul = document.createElement('ul');
+                ul.className = 'permissions-list';
+
                 permissions.forEach(permission => {
+                    console.log("Processing permission:", permission);
                     const li = document.createElement("li");
-                    const statusClass = permission.status.toLowerCase();
-                    li.innerHTML = `${permission.application} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
-                    permissionsList.appendChild(li);
+                    li.className = 'permission-item';
+                    
+                    const urgencyClass = `urgency-${permission.urgency.toLowerCase()}`;
+                    const urgencyIcon = getUrgencyIcon(permission.urgency);
+                    const timeRemainingText = permission.timeRemaining ? 
+                        `<span class="permission-time">⏳ ${permission.timeRemaining}</span>` : '';
+
+                    li.innerHTML = `
+                        <span class="permission-status">⏳ Pending</span>
+                        <span class="permission-app"><i class="fas fa-folder permission-icon"></i>${permission.application}</span>
+                        <span class="permission-urgency ${urgencyClass}">${urgencyIcon} ${permission.urgency}</span>
+                        ${timeRemainingText}
+                    `;
+                    ul.appendChild(li);
                 });
+
+                permissionsList.appendChild(ul);
             } catch (error) {
                 console.error('Error fetching permissions:', error);
+                if (error.response) {
+                    console.error('Response status:', error.response.status);
+                    console.error('Response data:', error.response.data);
+                }
+                document.getElementById("permissionsList").innerHTML = 
+                    '<li class="error-message">❌ Error loading permissions. Please try again later.</li>';
+            }
+        }
+
+        function getUrgencyIcon(urgency) {
+            switch(urgency.toLowerCase()) {
+                case 'low':
+                    return '🟢';
+                case 'medium':
+                    return '🟠';
+                case 'high':
+                    return '🔴';
+                default:
+                    return '⚪';
             }
         }
 
         async function loadApplications() {
             try {
                 const userEmail = localStorage.getItem("userEmail");
-                const response = await axios.get(`http://127.0.0.1:5001/applications?email=${userEmail}`);
+                const response = await axios.get(`${API_BASE_URL}/applications/${userEmail}`);
                 const applications = response.data;
                 const appList = document.getElementById("appList");
                 appList.innerHTML = '';

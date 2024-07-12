@@ -20,14 +20,12 @@ app.add_middleware(
 MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
 
 class Messages(BaseModel):
-    email: Optional[str] = None
-    messages :Optional[ List[str]] = None
+    email: str
+    messages :List[str]
 
 class Permission(BaseModel):
-    id: str
-    name: str
-    status: str
-    urgency: str
+    application : str
+    urgency : str
     timeRemaining: Optional[str] = None
 
 class Application(BaseModel):
@@ -38,11 +36,9 @@ class Application(BaseModel):
     permissions: List[str]
 
 class PermissionRequest(BaseModel):
-    applicationId: str
-    reason: Optional[str] = None
-    urgency: str
-    time: Optional[str] = None
-    days: Optional[str] = None
+    email : str
+    Permissions : List[Permission]
+
 
 class User(BaseModel):
     _id: str
@@ -62,6 +58,7 @@ class PermissionLevel(BaseModel):
 def startup_db_client():
     app.mongodb_client = MongoClient(MONGO_URL)
     app.database = app.mongodb_client["allowit123"]
+    # app.database.permissions.insert_one({ "email": "yyeret@g.jct.ac.il",  "permissions": [{"application": "AB", "urgency": "low", "timeRemaining": "2 days"} ,{"application": "cd", "urgency": "high"}]})
     # app.database.users.insert_one({
     #     "name": "Admin",
     #     "email": "yeretyn@gmail.com",
@@ -74,10 +71,10 @@ def startup_db_client():
     #     "phone": "1234567890",
     #     "permissionLevel": "admin",
     #     "isAdmin": False})
-    app.database.messages.insert_one({
-        "email": "yyeret@g.jct.ac.il",
-        "messages" : ["ejwbnf" , "eninwe"]
-    })
+    # app.database.messages.insert_one({
+    #     "email": "yyeret@g.jct.ac.il",
+    #     "messages" : ["ejwbnf" , "eninwe"]
+    # })
     print("Connected to MongoDB")
 
 
@@ -206,25 +203,31 @@ async def revoke_permission(permission_id: str):
 
 @app.get("/messages/{email}", response_model=List[str])
 async def get_messages(email: str):
-    try:
-        mes = app.database.messages.find_one({"email": email})
-        print(f"Retrieved document: {mes}")  # Debug print
-        
-        if mes is None:
-            print(f"No document found for email: {email}")
-            return []
-        
-        if "messages" not in mes:
-            print(f"'messages' key not found in document: {mes}")
-            return []
-        
-        messages = mes.get("messages", [])
-        print(f"Retrieved messages: {messages}")  # Debug print
-        return messages
-    except:
-        print("Error retrieving messages")
-        return []
-                    
+    mes = app.database.messages.find_one({"email": email})
+    if mes is None:
+        raise HTTPException(status_code=404, detail="Messages not found")
+    
+    # Ensure that `messages` key exists and is a list
+    messages = mes.get("messages", [])
+    return messages
+
+@app.get("/permissions/{email}", response_model=List[Permission])
+async def get_permissions(email: str):
+    print(f"Received request for permissions with email: {email}")
+    perm = app.database.permissions.find_one({"email": email})
+    if perm is None or "permissions" not in perm:
+        raise HTTPException(status_code=404, detail="Permissions not found")
+    
+    permissions = []
+    for p in perm["permissions"]:
+        print(p)
+        try:
+            permission = Permission(**p)
+            permissions.append(permission)
+        except ValueError as e:
+            print(f"Invalid permission data: {p}. Error: {str(e)}")
+    
+    return permissions
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
