@@ -24,8 +24,9 @@ class Messages(BaseModel):
     messages :List[str]
 
 class Permission(BaseModel):
-    application : str
+    name : str
     urgency : str
+    status: str
     timeRemaining: Optional[str] = None
 
 class Application(BaseModel):
@@ -36,8 +37,9 @@ class Application(BaseModel):
     permissions: List[str]
 
 class PermissionRequest(BaseModel):
-    email : str
-    Permissions : List[Permission]
+    request: str
+    urgency: str
+    timeRemaining: Optional[str] = None
 
 
 class User(BaseModel):
@@ -58,25 +60,38 @@ class PermissionLevel(BaseModel):
 def startup_db_client():
     app.mongodb_client = MongoClient(MONGO_URL)
     app.database = app.mongodb_client["allowit123"]
-    # app.database.permissions.insert_one({ "email": "yyeret@g.jct.ac.il",  "permissions": [{"application": "AB", "urgency": "low", "timeRemaining": "2 days"} ,{"application": "cd", "urgency": "high"}]})
+
+    # app.database.permissions.insert_one({ "email": "yyeret@g.jct.ac.il",  "permissions": [{"name": "AB", "urgency": "low", "timeRemaining": "2 days", "status": "pending"} ,{"name": "cd", "urgency": "high", "status": "approved"}]})
+   
     # app.database.users.insert_one({
     #     "name": "Admin",
     #     "email": "yeretyn@gmail.com",
     #     "phone": "1234567890",
     #     "permissionLevel": "admin",
     #     "isAdmin": True})
+
     # app.database.users.insert_one({
     #     "name": "Admin",
     #     "email": "yyeret@g.jct.ac.il",
     #     "phone": "1234567890",
     #     "permissionLevel": "admin",
     #     "isAdmin": False})
+
     # app.database.messages.insert_one({
     #     "email": "yyeret@g.jct.ac.il",
     #     "messages" : ["ejwbnf" , "eninwe"]
     # })
+
+    # app.database.applications.insert_one({
+    #     "name": "App1",
+    #     "icon": "../images/app-icon.png",
+    #     "href": "www.github.com",
+    #     "permissions": ["AB", "CD"]
+    # })
+
     print("Connected to MongoDB")
 
+############### user #############################
 
 # Get the details of a user
 @app.get("/user-details/{email}", response_model=User)
@@ -99,12 +114,6 @@ async def add_user(user: User):
     result = app.database.users.insert_one(user.dict(exclude={"id"}))
     return {"id": str(result.inserted_id)}
 
-@app.get("/users/{user_id}", response_model=User)
-async def get_user(user_id: str):
-    user = app.database.users.find_one({"_id": ObjectId(user_id)})
-    if user:
-        return User(id=str(user["_id"]), **user)
-    raise HTTPException(status_code=404, detail="User not found")
 
 @app.put("/users/{user_id}")
 async def update_user(user_id: str, user: User):
@@ -122,6 +131,8 @@ async def delete_user(user_id: str):
     if result.deleted_count:
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="User not found")
+
+############### levels #############################
 
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
@@ -157,10 +168,67 @@ async def delete_permission_level(level_id: str):
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="Permission level not found")
 
+############### permissions #############################
+
+# permission request for a user
+@app.post("/permission-request/{email}", response_model=Dict[str, str])
+async def add_permission_request(email: str, permission: PermissionRequest):
+    # Check if the user exists
+    user = app.database.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    new_permission = {
+        "name": permission.request,
+        "urgency": permission.urgency,
+        "timeRemaining": permission.timeRemaining,
+        "status": "pending"
+    }
+
+    # Check if the user already has permissions
+    user_permissions = app.database.permissions.find_one({"email": email})
+
+    if user_permissions:
+        # Add the new permission to the existing list
+        result = app.database.permissions.update_one(
+            {"email": email},
+            {"$push": {"permissions": new_permission}}
+        )
+    else:
+        # Create a new permissions document for the user
+        result = app.database.permissions.insert_one({
+            "email": email,
+            "permissions": [new_permission]
+        })
+
+    if result.modified_count > 0 or result.inserted_id:
+        return {"status": "success", "message": "Permission request added successfully"}
+    else:
+        raise HTTPException(status_code=500, detail="Failed to add permission request")
+
+
+@app.get("/approved-permissions", response_model=List[Permission])
+async def get_approved_permissions():
+    permissions = list(app.database.approved_permissions.find())
+    return [Permission(id=str(perm["_id"]), **perm) for perm in permissions]
+
+@app.post("/revoke-permission/{permission_id}")
+async def revoke_permission(permission_id: str):
+    result = app.database.approved_permissions.delete_one({"_id": ObjectId(permission_id)})
+    if result.deleted_count:
+        return {"status": "success"}
+    raise HTTPException(status_code=404, detail="Permission not found")
+
+############### applications #############################
+
+# Get the details of all applications
 @app.get("/applications", response_model=List[Application])
 async def get_applications():
     applications = list(app.database.applications.find())
     return [Application(id=str(app["_id"]), **app) for app in applications]
+
+
+############### requests #############################
 
 @app.get("/pending-requests", response_model=List[Permission])
 async def get_pending_requests():
@@ -187,20 +255,9 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
     app.database.pending_requests.delete_one({"_id": ObjectId(request_id)})
     return {"status": "success"}
 
-@app.get("/approved-permissions", response_model=List[Permission])
-async def get_approved_permissions():
-    permissions = list(app.database.approved_permissions.find())
-    return [Permission(id=str(perm["_id"]), **perm) for perm in permissions]
-
-@app.post("/revoke-permission/{permission_id}")
-async def revoke_permission(permission_id: str):
-    result = app.database.approved_permissions.delete_one({"_id": ObjectId(permission_id)})
-    if result.deleted_count:
-        return {"status": "success"}
-    raise HTTPException(status_code=404, detail="Permission not found")
-
 ############### messages #############################
 
+# return all messages for a user
 @app.get("/messages/{email}", response_model=List[str])
 async def get_messages(email: str):
     mes = app.database.messages.find_one({"email": email})
@@ -211,6 +268,7 @@ async def get_messages(email: str):
     messages = mes.get("messages", [])
     return messages
 
+# return all permissions for a user
 @app.get("/permissions/{email}", response_model=List[Permission])
 async def get_permissions(email: str):
     print(f"Received request for permissions with email: {email}")
