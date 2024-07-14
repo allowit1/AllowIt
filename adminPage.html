@@ -15,7 +15,7 @@
         <div class="header-text">
             <img src="../images/logo.jpg" alt="AllowIt Logo" class="logo">
             <div class="admin-info">
-                <p><strong>Admin:</strong> <span id="adminName"></span></p>
+                <p><strong>Name:</strong> <span id="adminName"></span></p>
                 <p><strong>Email:</strong> <span id="adminEmail"></span></p>
             </div>
         </div>
@@ -25,33 +25,39 @@
     </header>
 
     <div class="container">
-        <div class="card permission-levels">
-            <h2>Permission Levels</h2>
-            <button class="btn add-level" onclick="openModal('newLevelModal')">
-                <i class="fas fa-plus-circle"></i> Add New Level
-            </button>
-            <ul id="levelList"></ul>
-        </div>
-
-        <div class="card permission-requests">
-            <h2>Pending Requests</h2>
-            <ul id="pendingRequestsList"></ul>
-        </div>
-
-        <div class="card approved-permissions">
-            <h2>Approved Time-Limited Permissions</h2>
-            <ul id="approvedPermissionsList"></ul>
-        </div>
-
-        <div class="card user-management">
-            <h2>User Management</h2>
-            <div class="search-bar">
-                <input type="text" id="userSearch" onkeyup="searchUsers()" placeholder="Search users...">
+        <div class="top-row">
+            <div class="card user-management">
+                <h2>User Management</h2>
+                <div class="search-bar">
+                    <input type="text" id="userSearch" onkeyup="searchUsers()" placeholder="Search users...">
+                </div>
+                <button class="btn add-user" onclick="openModal('newUserModal')">
+                    <i class="fas fa-user-plus"></i> Add New User
+                </button>
+                <ul id="userList"></ul>
             </div>
-            <button class="btn add-user" onclick="openModal('newUserModal')">
-                <i class="fas fa-user-plus"></i> Add New User
-            </button>
-            <ul id="userList"></ul>
+
+            <div class="card permission-levels">
+                <h2>Permission Levels</h2>
+                <button class="btn add-level" onclick="openModal('newLevelModal')">
+                    <i class="fas fa-plus-circle"></i> Add New Level
+                </button>
+                <ul id="levelList"></ul>
+            </div>
+        </div>
+
+        <div class="middle-row">
+            <div class="card permission-requests">
+                <h2>Pending Requests</h2>
+                <ul id="pendingRequestsList"></ul>
+            </div>
+        </div>
+
+        <div class="bottom-row">
+            <div class="card approved-permissions">
+                <h2>Approved Time-Limited Permissions</h2>
+                <ul id="approvedPermissionsList"></ul>
+            </div>
         </div>
     </div>
 
@@ -127,17 +133,17 @@
         </div>
     </div>
 
-    <div id="updateLevelModal" class="modal">
+    <div id="editLevelModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('updateLevelModal')">&times;</span>
-            <h2>Update Permission Level</h2>
-            <form id="updateLevelForm">
-                <input type="hidden" id="updateLevelId">
+            <span class="close" onclick="closeModal('editLevelModal')">&times;</span>
+            <h2>Edit Permission Level</h2>
+            <form id="editLevelForm">
+                <input type="hidden" id="editLevelId">
                 <div class="form-group">
-                    <label for="updateLevelName">Level Name:</label>
-                    <input type="text" id="updateLevelName" required>
+                    <label for="editLevelName">Level Name:</label>
+                    <input type="text" id="editLevelName" required>
                 </div>
-                <div id="updateLevelAppPermissions" class="app-permissions"></div>
+                <div id="editLevelAppPermissions" class="app-permissions"></div>
                 <div class="button-group">
                     <button type="submit" class="btn">Update Level</button>
                     <button type="button" class="btn btn-danger" onclick="deletePermissionLevel()">Delete Level</button>
@@ -146,19 +152,19 @@
         </div>
     </div>
 
-    <div id="requestModal" class="modal">
+    <div id="handleRequestModal" class="modal">
         <div class="modal-content">
-            <span class="close" onclick="closeModal('requestModal')">&times;</span>
-            <h2>Handle Request</h2>
+            <span class="close" onclick="closeModal('handleRequestModal')">&times;</span>
+            <h2>Handle Permission Request</h2>
             <form id="handleRequestForm">
                 <input type="hidden" id="requestId">
                 <div class="form-group">
-                    <label for="adminReason">Reason:</label>
-                    <textarea id="adminReason" rows="3" placeholder="Optional admin comment"></textarea>
+                    <label for="requestReason">Reason:</label>
+                    <textarea id="requestReason" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <label for="expiryTime">Expiry Time (hours):</label>
-                    <input type="number" id="expiryTime" min="1" placeholder="Number of hours">
+                    <label for="requestTime">Time (hours):</label>
+                    <input type="number" id="requestTime" min="1">
                 </div>
                 <div class="button-group">
                     <button type="button" class="btn" onclick="handleRequest('approve')">Approve</button>
@@ -169,61 +175,25 @@
     </div>
 
     <script>
-
-        const adminEmail = localStorage.getItem("userEmail");
         const API_BASE_URL = "http://127.0.0.1:5001";
+        const adminEmail = localStorage.getItem("userEmail");
 
-        // Load admin details and data
         document.addEventListener("DOMContentLoaded", async () => {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/user-details/${adminEmail}`);
-                const adminData = response.data;
-
-                if (!adminData.isAdmin) {
-                    throw new Error("User is not an admin");
-                }
-
-                document.getElementById("adminName").textContent = adminData.name;
-                document.getElementById("adminEmail").textContent = adminEmail;
-
-                await loadUsers();
-                await loadPermissionLevels();
-                await loadPendingRequests();
-                await loadApprovedPermissions();
-                await populatePermissionLevelSelect();
-            } catch (error) {
-                console.error("Error loading admin page:", error);
-                alert("Error loading admin page. Please log in again.");
-                window.location.href = 'loginPage.html';
-            }
+            await loadAdminInfo();
+            await loadUsers();
+            await loadPermissionLevels();
+            await loadPendingRequests();
+            await loadApprovedPermissions();
         });
 
-        function toggleDarkMode() {
-            document.body.classList.toggle("dark-mode");
-        }
-
-        function openModal(modalId) {
-            document.getElementById(modalId).style.display = "block";
-            if (modalId === 'newLevelModal') {
-                populateAppPermissions('newLevelAppPermissions');
-            }
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = "none";
-        }
-
-        function searchUsers() {
-            const searchInput = document.getElementById("userSearch").value.toLowerCase();
-            const userList = document.getElementById("userList").getElementsByTagName("li");
-
-            for (let i = 0; i < userList.length; i++) {
-                const userName = userList[i].textContent.toLowerCase();
-                if (userName.includes(searchInput)) {
-                    userList[i].style.display = "";
-                } else {
-                    userList[i].style.display = "none";
-                }
+        async function loadAdminInfo() {
+            try {
+                const response = await axios.get(`${API_BASE_URL}/user-details/${adminEmail}`);
+                const admin = response.data;
+                document.getElementById("adminName").textContent = admin.name;
+                document.getElementById("adminEmail").textContent = admin.email;
+            } catch (error) {
+                console.error("Error loading admin info:", error);
             }
         }
 
@@ -233,73 +203,14 @@
                 const users = response.data;
                 const userList = document.getElementById("userList");
                 userList.innerHTML = '';
-
                 users.forEach(user => {
                     const li = document.createElement("li");
-                    li.innerHTML = `${user.name} - ${user.email} - ${user.permissionLevel}`;
-                    li.addEventListener('click', () => editUser(user.id));
+                    li.textContent = `${user.name} - ${user.email} - ${user.permissionLevel}`;
+                    li.onclick = () => editUser(user);
                     userList.appendChild(li);
                 });
             } catch (error) {
-                console.error('Error fetching users:', error);
-            }
-        }
-
-        async function addUser(event) {
-            event.preventDefault();
-            const name = document.getElementById("newUserName").value;
-            const email = document.getElementById("newUserEmail").value;
-            const phone = document.getElementById("newUserPhone").value;
-            const permissionLevel = document.getElementById("newUserLevel").value;
-
-            try {
-                const response = await axios.post(`${API_BASE_URL}/users`, {
-                    name,
-                    email,
-                    phone,
-                    permissionLevel,
-                    isAdmin: false
-                });
-                
-                console.log("User added successfully:", response.data);
-                closeModal('newUserModal');
-                await loadUsers();
-            } catch (error) {
-                console.error('Error adding new user:', error);
-                if (error.response) {
-                    console.error('Server error response:', error.response.data);
-                    alert(`Failed to add user: ${error.response.data.detail || 'Unknown error'}`);
-                }
-            }
-        }
-
-        async function editUser(userId) {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/users/${userId}`);
-                const user = response.data;
-                
-                document.getElementById('editUserId').value = user.id;
-                document.getElementById('editUserName').value = user.name;
-                document.getElementById('editUserEmail').value = user.email;
-                document.getElementById('editUserPhone').value = user.phone || '';
-                document.getElementById('editUserLevel').value = user.permissionLevel;
-                
-                openModal('editUserModal');
-            } catch (error) {
-                console.error('Error fetching user details:', error);
-            }
-        }
-
-        async function deleteUser() {
-            const userId = document.getElementById('editUserId').value;
-            if (confirm('Are you sure you want to delete this user?')) {
-                try {
-                    await axios.delete(`${API_BASE_URL}/users/${userId}`);
-                    closeModal('editUserModal');
-                    await loadUsers();
-                } catch (error) {
-                    console.error('Error deleting user:', error);
-                }
+                console.error("Error loading users:", error);
             }
         }
 
@@ -309,77 +220,14 @@
                 const levels = response.data;
                 const levelList = document.getElementById("levelList");
                 levelList.innerHTML = '';
-
                 levels.forEach(level => {
                     const li = document.createElement("li");
                     li.textContent = level.name;
-                    li.addEventListener('click', () => openUpdateLevelModal(level.id));
+                    li.onclick = () => editPermissionLevel(level);
                     levelList.appendChild(li);
                 });
-
-                await populatePermissionLevelSelect();
             } catch (error) {
-                console.error('Error fetching permission levels:', error);
-            }
-        }
-
-        async function fetchApplications() {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/applications`);
-                return response.data;
-            } catch (error) {
-                console.error('Error fetching applications:', error);
-                return [];
-            }
-        }
-
-        async function populateAppPermissions(containerId, selectedPermissions = {}) {
-            const applications = await fetchApplications();
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-
-            applications.forEach(app => {
-                const appDiv = document.createElement('div');
-                appDiv.innerHTML = `
-                    <h4>${app.name}</h4>
-                    ${app.permissions.map(perm => `
-                        <label>
-                            <input type="checkbox" name="${app.id}_${perm}" 
-                                ${selectedPermissions[app.id]?.includes(perm) ? 'checked' : ''}>
-                            ${perm}
-                        </label>
-                    `).join('')}
-                `;
-                container.appendChild(appDiv);
-            });
-        }
-
-        async function openUpdateLevelModal(levelId) {
-            try {
-                const response = await axios.get(`${API_BASE_URL}/permission-levels/${levelId}`);
-                const level = response.data;
-                
-                document.getElementById('updateLevelId').value = level.id;
-                document.getElementById('updateLevelName').value = level.name;
-                
-                await populateAppPermissions('updateLevelAppPermissions', level.permissions);
-                
-                openModal('updateLevelModal');
-            } catch (error) {
-                console.error('Error fetching permission level details:', error);
-            }
-        }
-
-        async function deletePermissionLevel() {
-            const levelId = document.getElementById('updateLevelId').value;
-            if (confirm('Are you sure you want to delete this permission level?')) {
-                try {
-                    await axios.delete(`${API_BASE_URL}/permission-levels/${levelId}`);
-                    closeModal('updateLevelModal');
-                    await loadPermissionLevels();
-                } catch (error) {
-                    console.error('Error deleting permission level:', error);
-                }
+                console.error("Error loading permission levels:", error);
             }
         }
 
@@ -387,42 +235,18 @@
             try {
                 const response = await axios.get(`${API_BASE_URL}/pending-requests`);
                 const requests = response.data;
-                const pendingRequestsList = document.getElementById("pendingRequestsList");
-                pendingRequestsList.innerHTML = '';
-
+                const requestsList = document.getElementById("pendingRequestsList");
+                requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
                     li.innerHTML = `
-                        <span>${request.user} - ${request.application}</span>
-                        <button onclick="openRequestModal('${request.id}')" class="btn btn-small">Handle</button>
+                        <span>${request.name} - ${request.urgency}</span>
+                        <button class="btn btn-small" onclick="openHandleRequestModal('${request.id}')">Handle</button>
                     `;
-                    pendingRequestsList.appendChild(li);
+                    requestsList.appendChild(li);
                 });
             } catch (error) {
-                console.error('Error fetching pending requests:', error);
-            }
-        }
-
-        function openRequestModal(requestId) {
-            document.getElementById('requestId').value = requestId;
-            openModal('requestModal');
-        }
-
-        async function handleRequest(action) {
-            const requestId = document.getElementById('requestId').value;
-            const reason = document.getElementById('adminReason').value;
-            const expiryTime = document.getElementById('expiryTime').value;
-
-            try {
-                await axios.post(`${API_BASE_URL}/${action}-request/${requestId}`, {
-                    reason: reason,
-                    expiryTime: parseInt(expiryTime)
-                });
-                closeModal('requestModal');
-                await loadPendingRequests();
-                await loadApprovedPermissions();
-            } catch (error) {
-                console.error(`Error ${action}ing request:`, error);
+                console.error("Error loading pending requests:", error);
             }
         }
 
@@ -430,134 +254,213 @@
             try {
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
                 const permissions = response.data;
-                const approvedPermissionsList = document.getElementById("approvedPermissionsList");
-                approvedPermissionsList.innerHTML = '';
-
+                const permissionsList = document.getElementById("approvedPermissionsList");
+                permissionsList.innerHTML = '';
                 permissions.forEach(permission => {
                     const li = document.createElement("li");
                     li.innerHTML = `
-                        <span>${permission.user} - ${permission.application} 
-                        (Expires: ${new Date(permission.expiryDate).toLocaleString()})</span>
-                        <button onclick="revokePermission('${permission.id}')" class="btn btn-small btn-danger">Revoke</button>
+                        <span>${permission.name} - ${permission.urgency} - ${permission.timeRemaining}</span>
+                        <button class="btn btn-small btn-danger" onclick="revokePermission('${permission.id}')">Revoke</button>
                     `;
-                    approvedPermissionsList.appendChild(li);
+                    permissionsList.appendChild(li);
                 });
             } catch (error) {
-                console.error('Error fetching approved permissions:', error);
+                console.error("Error loading approved permissions:", error);
             }
         }
 
-        async function revokePermission(permissionId) {
-            if (confirm('Are you sure you want to revoke this permission?')) {
-                try {
-                    await axios.post(`${API_BASE_URL}/revoke-permission/${permissionId}`);
-                    await loadApprovedPermissions();
-                } catch (error) {
-                    console.error('Error revoking permission:', error);
-                }
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+        }
+
+        function searchUsers() {
+            const searchTerm = document.getElementById("userSearch").value.toLowerCase();
+            const userList = document.getElementById("userList").getElementsByTagName("li");
+            for (let i = 0; i < userList.length; i++) {
+                const userName = userList[i].textContent.toLowerCase();
+                userList[i].style.display = userName.includes(searchTerm) ? "" : "none";
             }
         }
 
-        async function populatePermissionLevelSelect() {
+        function openModal(modalId) {
+            document.getElementById(modalId).style.display = "block";
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+
+        async function addUser(event) {
+            event.preventDefault();
+            const name = document.getElementById("newUserName").value;
+            const email = document.getElementById("newUserEmail").value;
+            const phone = document.getElementById("newUserPhone").value;
+            const permissionLevel = document.getElementById("newUserLevel").value;
             try {
-                const response = await axios.get(`${API_BASE_URL}/permission-levels`);
-                const levels = response.data;
-                const newUserLevel = document.getElementById("newUserLevel");
-                const editUserLevel = document.getElementById("editUserLevel");
-                
-                [newUserLevel, editUserLevel].forEach(select => {
-                    select.innerHTML = '';
-                    levels.forEach(level => {
-                        const option = document.createElement("option");
-                        option.value = level.name;
-                        option.textContent = level.name;
-                        select.appendChild(option);
-                    });
-                });
+                await axios.post(`${API_BASE_URL}/users`, { name, email, phone, permissionLevel });
+                closeModal('newUserModal');
+                await loadUsers();
             } catch (error) {
-                console.error('Error fetching permission levels:', error);
+                console.error("Error adding user:", error);
             }
         }
 
-        // Event listeners
-        document.getElementById("newUserForm").addEventListener("submit", addUser);
+        function editUser(user) {
+            document.getElementById("editUserId").value = user.id;
+            document.getElementById("editUserName").value = user.name;
+            document.getElementById("editUserEmail").value = user.email;
+            document.getElementById("editUserPhone").value = user.phone;
+            document.getElementById("editUserLevel").value = user.permissionLevel;
+            openModal('editUserModal');
+        }
 
-        document.getElementById("editUserForm").addEventListener("submit", async (event) => {
+        async function updateUser(event) {
             event.preventDefault();
             const id = document.getElementById("editUserId").value;
             const name = document.getElementById("editUserName").value;
             const email = document.getElementById("editUserEmail").value;
             const phone = document.getElementById("editUserPhone").value;
-            const level = document.getElementById("editUserLevel").value;
-
+            const permissionLevel = document.getElementById("editUserLevel").value;
             try {
-                await axios.put(`${API_BASE_URL}/users/${id}`, { 
-                    name, 
-                    email, 
-                    phone, 
-                    permissionLevel: level
-                });
+                await axios.put(`${API_BASE_URL}/users/${id}`, { name, email, phone, permissionLevel });
                 closeModal('editUserModal');
                 await loadUsers();
             } catch (error) {
-                console.error('Error updating user:', error);
-                if (error.response) {
-                    console.error('Server error response:', error.response.data);
-                    alert(`Failed to update user: ${error.response.data.detail || 'Unknown error'}`);
+                console.error("Error updating user:", error);
+            }
+        }
+
+        async function deleteUser() {
+            const id = document.getElementById("editUserId").value;
+            if (confirm("Are you sure you want to delete this user?")) {
+                try {
+                    await axios.delete(`${API_BASE_URL}/users/${id}`);
+                    closeModal('editUserModal');
+                    await loadUsers();
+                } catch (error) {
+                    console.error("Error deleting user:", error);
                 }
             }
-        });
+        }
 
-        document.getElementById("newLevelForm").addEventListener("submit", async (event) => {
+        async function addPermissionLevel(event) {
             event.preventDefault();
             const name = document.getElementById("newLevelName").value;
-            const permissions = {};
-
-            const checkboxes = document.querySelectorAll('#newLevelAppPermissions input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                const [appId, perm] = checkbox.name.split('_');
-                if (!permissions[appId]) permissions[appId] = [];
-                if (checkbox.checked) permissions[appId].push(perm);
-            });
-
+            const permissions = getSelectedPermissions("newLevelAppPermissions");
             try {
                 await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
                 closeModal('newLevelModal');
                 await loadPermissionLevels();
             } catch (error) {
-                console.error('Error adding new permission level:', error);
-                if (error.response) {
-                    console.error('Server error response:', error.response.data);
-                    alert(`Failed to add permission level: ${error.response.data.detail || 'Unknown error'}`);
+                console.error("Error adding permission level:", error);
+            }
+        }
+
+        function editPermissionLevel(level) {
+            document.getElementById("editLevelId").value = level.id;
+            document.getElementById("editLevelName").value = level.name;
+            populatePermissions("editLevelAppPermissions", level.permissions);
+            openModal('editLevelModal');
+        }
+
+        async function updatePermissionLevel(event) {
+            event.preventDefault();
+            const id = document.getElementById("editLevelId").value;
+            const name = document.getElementById("editLevelName").value;
+            const permissions = getSelectedPermissions("editLevelAppPermissions");
+            try {
+                await axios.put(`${API_BASE_URL}/permission-levels/${id}`, { name, permissions });
+                closeModal('editLevelModal');
+                await loadPermissionLevels();
+            } catch (error) {
+                console.error("Error updating permission level:", error);
+            }
+        }
+        async function deletePermissionLevel() {
+            const id = document.getElementById("editLevelId").value;
+            if (confirm("Are you sure you want to delete this permission level?")) {
+                try {
+                    await axios.delete(`${API_BASE_URL}/permission-levels/${id}`);
+                    closeModal('editLevelModal');
+                    await loadPermissionLevels();
+                } catch (error) {
+                    console.error("Error deleting permission level:", error);
                 }
             }
-        });
+        }
 
-        document.getElementById("updateLevelForm").addEventListener("submit", async (event) => {
-            event.preventDefault();
-            const id = document.getElementById("updateLevelId").value;
-            const name = document.getElementById("updateLevelName").value;
+        function openHandleRequestModal(requestId) {
+            document.getElementById("requestId").value = requestId;
+            openModal('handleRequestModal');
+        }
+
+        async function handleRequest(action) {
+            const requestId = document.getElementById("requestId").value;
+            const reason = document.getElementById("requestReason").value;
+            const time = document.getElementById("requestTime").value;
+            try {
+                await axios.post(`${API_BASE_URL}/${action}-request/${requestId}`, { reason, expiryTime: parseInt(time) });
+                closeModal('handleRequestModal');
+                await loadPendingRequests();
+                await loadApprovedPermissions();
+            } catch (error) {
+                console.error(`Error ${action}ing request:`, error);
+            }
+        }
+
+        async function revokePermission(permissionId) {
+            if (confirm("Are you sure you want to revoke this permission?")) {
+                try {
+                    await axios.post(`${API_BASE_URL}/revoke-permission/${permissionId}`);
+                    await loadApprovedPermissions();
+                } catch (error) {
+                    console.error("Error revoking permission:", error);
+                }
+            }
+        }
+
+        function getSelectedPermissions(containerId) {
+            const container = document.getElementById(containerId);
             const permissions = {};
-
-            const checkboxes = document.querySelectorAll('#updateLevelAppPermissions input[type="checkbox"]');
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(checkbox => {
                 const [appId, perm] = checkbox.name.split('_');
                 if (!permissions[appId]) permissions[appId] = [];
                 if (checkbox.checked) permissions[appId].push(perm);
             });
+            return permissions;
+        }
 
+        async function populatePermissions(containerId, selectedPermissions = {}) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
             try {
-                await axios.put(`${API_BASE_URL}/permission-levels/${id}`, { name, permissions });
-                closeModal('updateLevelModal');
-                await loadPermissionLevels();
+                const response = await axios.get(`${API_BASE_URL}/applications`);
+                const applications = response.data;
+                applications.forEach(app => {
+                    const appDiv = document.createElement('div');
+                    appDiv.innerHTML = `
+                        <h4>${app.name}</h4>
+                        ${app.permissions.map(perm => `
+                            <label>
+                                <input type="checkbox" name="${app.id}_${perm}" 
+                                    ${selectedPermissions[app.id]?.includes(perm) ? 'checked' : ''}>
+                                ${perm}
+                            </label>
+                        `).join('')}
+                    `;
+                    container.appendChild(appDiv);
+                });
             } catch (error) {
-                console.error('Error updating permission level:', error);
-                if (error.response) {
-                    console.error('Server error response:', error.response.data);
-                    alert(`Failed to update permission level: ${error.response.data.detail || 'Unknown error'}`);
-                }
+                console.error("Error fetching applications:", error);
             }
-        });
+        }
+
+        // Event listeners
+        document.getElementById("newUserForm").addEventListener("submit", addUser);
+        document.getElementById("editUserForm").addEventListener("submit", updateUser);
+        document.getElementById("newLevelForm").addEventListener("submit", addPermissionLevel);
+        document.getElementById("editLevelForm").addEventListener("submit", updatePermissionLevel);
 
         // Close modal when clicking outside
         window.onclick = function(event) {
