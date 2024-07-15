@@ -95,7 +95,7 @@
 }
 .container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 20px;
 }
 
@@ -105,12 +105,53 @@
 }
 
 .top-row .card {
-    flex: 1;
+    flex: 1 ;
+    height: fit-content;
 }
 
 .middle-row,
 .bottom-row {
     width: 100%;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.tab-container {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.tab {
+    padding: 12px 24px;
+    background-color: var(--hover-bg);
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.1s ease, color 0.1s ease;
+    font-weight: 500;
+    border-radius: 5px 5px 0 0;
+}
+
+.tab.active {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.low {
+    color: #000000;
+}
+
+.medium {
+    color: #9c7e2d;
+}
+
+.high{
+    color: #ad2a10;
 }
 
 @media (max-width: 768px) {
