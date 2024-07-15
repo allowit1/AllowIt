@@ -73,10 +73,17 @@ class User(BaseModel):
     permissionLevel: str
     isAdmin: bool
 
+
+class AppPermission(BaseModel):
+    permissions: dict[str, bool]
+
+
+
 class PermissionLevel(BaseModel):
-    id: Optional[str]
     name: str
-    permissions: Dict[str, List[str]]
+    permissions: List[dict[Application , AppPermission]]
+
+    
 
 @app.get("/user-details/{email}", response_model=User)
 async def get_user_details(email: str):
@@ -124,21 +131,20 @@ async def delete_user(user_id: str):
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="User not found")
 
+
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
-    db = get_database()
-    levels = list(db.permission_levels.find())
-    for level in levels:
-        level['id'] = str(level['_id'])
+    levels = database.permission_levels.find()
     return levels
 
 @app.post("/permission-levels", response_model=PermissionLevel)
 async def add_permission_level(level: PermissionLevel):
-    db = get_database()
-    level_dict = level.dict(exclude={'id'})
-    result = db.permission_levels.insert_one(level_dict)
-    level_dict['id'] = str(result.inserted_id)
-    return level_dict
+    if(database.permission_levels.find_one(level.name) ):
+       raise HTTPException(status_code=403 , detail="Permission level already exists")
+    else:
+       database.permission_level.insert_one(level)
+    print("succeed")
+      
 
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
 async def update_permission_level(level_id: str, level: PermissionLevel):
