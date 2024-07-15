@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
@@ -94,7 +94,7 @@
                 </div>
                 <div class="form-group">
                     <label for="newUserLevel">Permission Level:</label>
-                    <select id="newUserLevel" required></select>
+                    <select id="newUserLevel"></select>
                 </div>
                 <button type="submit" class="btn">Add User</button>
             </form>
@@ -121,7 +121,7 @@
                 </div>
                 <div class="form-group">
                     <label for="editUserLevel">Permission Level:</label>
-                    <select id="editUserLevel" required></select>
+                    <select id="editUserLevel"></select>
                 </div>
                 <div class="button-group">
                     <button type="submit" class="btn">Update User</button>
@@ -197,6 +197,8 @@
             await loadPermissionLevels();
             await loadPendingRequests();
             await loadApprovedPermissions();
+
+            initNewLevelPermissions(); // Initialize permissions for new level form
         });
 
         async function loadAdminInfo() {
@@ -207,6 +209,8 @@
                 document.getElementById("adminEmail").textContent = admin.email;
             } catch (error) {
                 console.error("Error loading admin info:", error);
+                // Redirect to login page if error occurs
+                window.location.href = "loginPage.html";
             }
         }
 
@@ -232,15 +236,41 @@
                 const response = await axios.get(`${API_BASE_URL}/permission-levels`);
                 const levels = response.data;
                 const levelList = document.getElementById("levelList");
+                const newUserLevel = document.getElementById("newUserLevel");
+                const editUserLevel = document.getElementById("editUserLevel");
+                
                 levelList.innerHTML = '';
+                newUserLevel.innerHTML = '';
+                editUserLevel.innerHTML = '';
+                
                 levels.forEach(level => {
                     const li = document.createElement("li");
                     li.textContent = level.name;
                     li.onclick = () => editPermissionLevel(level);
                     levelList.appendChild(li);
+
+                    const option = document.createElement("option");
+                    option.value = level.id;
+                    option.textContent = level.name;
+                    newUserLevel.appendChild(option.cloneNode(true));
+                    editUserLevel.appendChild(option);
                 });
             } catch (error) {
                 console.error("Error loading permission levels:", error);
+            }
+        }
+        async function addPermissionLevel(event) {
+            event.preventDefault();
+            const name = document.getElementById("newLevelName").value;
+            const permissions = getSelectedPermissions("newLevelAppPermissions");
+            console.log("Sending data:", { name, permissions });
+            try {
+                const response = await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
+                console.log("Response:", response.data);
+                closeModal('newLevelModal');
+                await loadPermissionLevels();
+            } catch (error) {
+                console.error("Error adding permission level:", error.response ? error.response.data : error.message);
             }
         }
 
@@ -373,7 +403,9 @@
         async function addPermissionLevel(event) {
             event.preventDefault();
             const name = document.getElementById("newLevelName").value;
+            console.log(name);
             const permissions = getSelectedPermissions("newLevelAppPermissions");
+            console.log(permissions);
             try {
                 await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
                 closeModal('newLevelModal');
@@ -458,6 +490,7 @@
             return permissions;
         }
 
+        
         async function populatePermissions(containerId, selectedPermissions = {}) {
             const container = document.getElementById(containerId);
             container.innerHTML = '';
@@ -481,6 +514,11 @@
             } catch (error) {
                 console.error("Error fetching applications:", error);
             }
+        }
+
+        // Add this function to initialize the permission checkboxes when adding a new level
+        function initNewLevelPermissions() {
+            populatePermissions("newLevelAppPermissions");
         }
 
         // Event listeners

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 import uvicorn
 from pymongo import MongoClient
@@ -75,13 +75,12 @@ class User(BaseModel):
 
 
 class AppPermission(BaseModel):
-    permissions: dict[str, bool]
-
-
+    name: str
+    permissions: List[str]
 
 class PermissionLevel(BaseModel):
     name: str
-    permissions: List[dict[Application , AppPermission]]
+    Permissions: List[AppPermission]
 
     
 
@@ -132,32 +131,78 @@ async def delete_user(user_id: str):
     raise HTTPException(status_code=404, detail="User not found")
 
 
+@app.post("/permission-levels", response_model=PermissionLevel)
+async def add_permission_level(level_data: dict):
+    print("Received data:", level_data)
+    db = get_database()
+    name = level_data['name']
+    permissions = level_data['permissions']
+
+    existing_level = db.permission_levels.find_one({"name": name})
+    if existing_level:
+        raise HTTPException(status_code=400, detail="Permission level already exists")
+    
+    app_permissions = []
+    for app_id, perms in permissions.items():
+        app = db.applications.find_one({"_id": ObjectId(app_id)})
+        if app:
+            app_permissions.append(AppPermission(
+                name=app['name'],
+                permissions=perms
+            ))
+
+    new_level = PermissionLevel(
+        name=name,
+        Permissions=app_permissions
+    )
+
+    result = db.permission_levels.insert_one(new_level.dict())
+    
+    if result.inserted_id:
+        return new_level
+    else:
+        raise HTTPException(status_code=500, detail="Failed to add permission level")
+      
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
-    levels = database.permission_levels.find()
-    return levels
-
-@app.post("/permission-levels", response_model=PermissionLevel)
-async def add_permission_level(level: PermissionLevel):
-    if(database.permission_levels.find_one(level.name) ):
-       raise HTTPException(status_code=403 , detail="Permission level already exists")
-    else:
-       database.permission_level.insert_one(level)
-    print("succeed")
-      
+    db = get_database()
+    levels = list(db.permission_levels.find())
+    return [PermissionLevel(id=str(level['_id']), name=level['name'], Permissions=level['Permissions']) for level in levels]
 
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
-async def update_permission_level(level_id: str, level: PermissionLevel):
+async def update_permission_level(level_id: str, level_data: dict):
     db = get_database()
+    name = level_data['name']
+    permissions = level_data['permissions']
+
+    existing_level = db.permission_levels.find_one({"_id": ObjectId(level_id)})
+    if not existing_level:
+        raise HTTPException(status_code=404, detail="Permission level not found")
+    
+    app_permissions = []
+    for app_id, perms in permissions.items():
+        app = db.applications.find_one({"_id": ObjectId(app_id)})
+        if app:
+            app_permissions.append(AppPermission(
+                name=app['name'],
+                permissions=perms
+            ))
+
+    updated_level = PermissionLevel(
+        id=level_id,
+        name=name,
+        Permissions=app_permissions
+    )
+
     result = db.permission_levels.update_one(
         {"_id": ObjectId(level_id)},
-        {"$set": level.dict(exclude={'id'})}
+        {"$set": updated_level.dict(exclude={'id'})}
     )
+    
     if result.modified_count:
-        updated_level = db.permission_levels.find_one({"_id": ObjectId(level_id)})
-        updated_level['id'] = str(updated_level['_id'])
         return updated_level
-    raise HTTPException(status_code=404, detail="Permission level not found")
+    else:
+        raise HTTPException(status_code=500, detail="Failed to update permission level")
 
 @app.delete("/permission-levels/{level_id}")
 async def delete_permission_level(level_id: str):
