@@ -66,7 +66,6 @@ class PermissionRequest(BaseModel):
     timeRemaining: Optional[str] = None
 
 class User(BaseModel):
-    id: Optional[str]
     name: str
     email: str
     phone: str
@@ -101,25 +100,26 @@ async def get_users():
         user['id'] = str(user['_id'])
     return users
 
-@app.post("/users", response_model=User)
-async def add_user(user: User):
-    db = get_database()
-    user_dict = user.dict(exclude={'id'})
-    result = db.users.insert_one(user_dict)
-    user_dict['id'] = str(result.inserted_id)
-    return user_dict
+# @app.post("/users", response_model=User)
+# async def add_user(user: User):
+#     db = get_database()
+#     user_dict = user.dict(exclude={'id'})
+#     result = db.users.insert_one(user_dict)
+#     user_dict['id'] = str(result.inserted_id)
+#     return user_dict
 
 @app.put("/users/{user_id}", response_model=User)
 async def update_user(user_id: str, user: User):
     db = get_database()
     result = db.users.update_one(
         {"_id": ObjectId(user_id)},
-        {"$set": user.dict(exclude={'id'})}
+        {"$set": user.dict(exclude_unset=True)}
     )
     if result.modified_count:
         updated_user = db.users.find_one({"_id": ObjectId(user_id)})
-        updated_user['id'] = str(updated_user['_id'])
-        return updated_user
+        if updated_user:
+            updated_user['id'] = str(updated_user['_id'])
+            return updated_user
     raise HTTPException(status_code=404, detail="User not found")
 
 @app.delete("/users/{user_id}")
@@ -129,6 +129,16 @@ async def delete_user(user_id: str):
     if result.deleted_count:
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="User not found")
+
+
+  
+@app.get("/permission-levels", response_model=List[PermissionLevel])
+async def get_permission_levels():
+    db = get_database()
+    levels = list(db.permission_levels.find())
+    return [PermissionLevel(id=str(level['_id']), name=level['name'], Permissions=level['Permissions']) for level in levels]
+
+
 
 
 @app.post("/permission-levels", response_model=PermissionLevel)
@@ -141,7 +151,7 @@ async def add_permission_level(level_data: dict):
     existing_level = db.permission_levels.find_one({"name": name})
     if existing_level:
         raise HTTPException(status_code=400, detail="Permission level already exists")
-    
+
     app_permissions = []
     for app_id, perms in permissions.items():
         app = db.applications.find_one({"_id": ObjectId(app_id)})
@@ -157,17 +167,13 @@ async def add_permission_level(level_data: dict):
     )
 
     result = db.permission_levels.insert_one(new_level.dict())
-    
+
     if result.inserted_id:
         return new_level
     else:
-        raise HTTPException(status_code=500, detail="Failed to add permission level")
-      
-@app.get("/permission-levels", response_model=List[PermissionLevel])
-async def get_permission_levels():
-    db = get_database()
-    levels = list(db.permission_levels.find())
-    return [PermissionLevel(id=str(level['_id']), name=level['name'], Permissions=level['Permissions']) for level in levels]
+       database.permission_level.insert_one(level)
+    print("succeed")
+    raise HTTPException(status_code=500, detail="Failed to add permission level")
 
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
 async def update_permission_level(level_id: str, level_data: dict):
@@ -337,6 +343,30 @@ async def get_permissions(email: str):
     if perm is None or "permissions" not in perm:
         raise HTTPException(status_code=404, detail="Permissions not found")
     return perm["permissions"]
+
+@app.post ("/users" , response_model=User)
+async def add_user(user_data: dict):
+    
+    db = get_database()
+    name = user_data['name']
+    email = user_data['email']
+    phone = user_data['phone']
+    permissionLevel = user_data['permissionLevel']
+    existing_user = db.users.find_one({"email": email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already exists")
+    new_user = User(
+        name=name,
+        email=email,
+        phone=phone,
+        permissionLevel=permissionLevel,
+        isAdmin=False
+    )
+    result = db.users.insert_one(new_user.dict())
+    if result.inserted_id:
+        return new_user
+    else:
+        raise HTTPException(status_code=500, detail="Failed to add user")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
