@@ -9,9 +9,11 @@ from bson import ObjectId
 
 app = FastAPI()
 
+origins = ['http://localhost:5050', 'https://localhost:3000']
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,6 +50,7 @@ class Messages(BaseModel):
     messages: List[str]
 
 class Permission(BaseModel):
+    id:str
     name: str
     urgency: str
     status: str
@@ -290,6 +293,9 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
 
 @app.get("/approved-permissions", response_model=List[Permission])
 async def get_approved_permissions():
+    '''
+    Get all approved permissions
+    '''
     db = get_database()
     all_permissions = list(db.permissions.find())
     approved_permissions = []
@@ -304,6 +310,7 @@ async def get_approved_permissions():
 async def revoke_permission(permission_id: str):
     db = get_database()
     user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
+    print(user_permissions)
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Permission not found")
     
@@ -340,9 +347,18 @@ async def get_messages(email: str):
 async def get_permissions(email: str):
     db = get_database()
     perm = db.permissions.find_one({"email": email})
+    print(perm)
     if perm is None or "permissions" not in perm:
         raise HTTPException(status_code=404, detail="Permissions not found")
-    return perm["permissions"]
+    all_permissions = []
+    for permission in perm['permissions']:
+        permission['id'] = str(permission['_id']) if '_id' in permission else str(perm['_id'])
+        if 'reason' in permission:
+            del permission['reason']
+        all_permissions.append(permission)
+    print(all_permissions)
+    return all_permissions
+    
 
 @app.post ("/users" , response_model=User)
 async def add_user(user_data: dict):

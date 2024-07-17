@@ -188,7 +188,8 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://55.144.90.189:5001";
+        // const API_BASE_URL= "http://55.144.90.189:5001";
+        const API_BASE_URL= "http://localhost:5001";
         const adminEmail = localStorage.getItem("userEmail");
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -275,7 +276,7 @@
                         <span  class="${urgencyClass}"">${request.name} - ${request.urgency}</span>
                     `;
                     
-                    li.onclick = () => openHandleRequestModal('${request.id}');
+                    li.onclick = () => openHandleRequestModal(request.id);
                     requestsList.appendChild(li);
                 });
             } catch (error) {
@@ -504,6 +505,7 @@
             const requestId = document.getElementById("requestId").value;
             const reason = document.getElementById("requestReason").value;
             const time = document.getElementById("requestTime").value;
+            console.log("Handling request:", { requestId, action, reason, time });
             try {
                 await axios.post(`${API_BASE_URL}/${action}-request/${requestId}`, { reason, expiryTime: parseInt(time) });
                 closeModal('handleRequestModal');
@@ -517,6 +519,7 @@
         async function revokePermission(permissionId) {
             if (confirm("Are you sure you want to revoke this permission?")) {
                 try {
+                    //take the permission id and send a delete request to the server
                     await axios.post(`${API_BASE_URL}/revoke-permission/${permissionId}`);
                     await loadApprovedPermissions();
                 } catch (error) {
