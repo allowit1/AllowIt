@@ -6,12 +6,12 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v8.0": {
-      "AutomationTest/1.0.0": {
+      "AllowIt/1.0.0": {
         "dependencies": {
           "YamlDotNet": "15.3.0"
         },
         "runtime": {
-          "AutomationTest.dll": {}
+          "AllowIt.dll": {}
         }
       },
       "YamlDotNet/15.3.0": {
@@ -25,7 +25,7 @@
     }
   },
   "libraries": {
-    "AutomationTest/1.0.0": {
+    "AllowIt/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

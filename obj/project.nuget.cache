@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "VlRrgZLe8TbiF0m2fsd1X/ki23jqog0clUumXwwezNkWWNxyWM2/ngK+erahPoJPdrs0SKWl+7V+Qw8YjleXIg==",
+  "dgSpecHash": "e1bsKu8DG7CvefMxMU4IaH+OVI4BK/p0vxu+1OE0PmfHK10Vo2NcgvWGaWN8+Y//Wb3qtT0nYwFABPDsxI7Anw==",
   "success": true,
-  "projectFilePath": "C:\\Users\\User\\Documents\\Automation_Test\\AllowIt\\AutomationTest.csproj",
+  "projectFilePath": "C:\\Users\\User\\Documents\\Automation_Test\\AllowIt\\AllowIt.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\User\\.nuget\\packages\\yamldotnet\\15.3.0\\yamldotnet.15.3.0.nupkg.sha512"
   ],
