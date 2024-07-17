@@ -233,7 +233,7 @@ class Program
         string baseDirectory = @"C:\Users\User\Documents\Automation_Test\AllowIt";
 
          // Pull changes from GitHub
-        //PullFromGitHub(baseDirectory);
+        PullFromGitHub(baseDirectory);
 
         // AddPartner(baseDirectory, "example_group1", "benayat1", "write");
         // RemovePartner(baseDirectory, "example_group1", "maor-noy", "write");
