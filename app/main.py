@@ -49,6 +49,7 @@ class Messages(BaseModel):
 
 class Permission(BaseModel):
     name: str
+    subPermission: str
     urgency: str
     status: str
     timeRemaining: Optional[str] = None
@@ -62,6 +63,7 @@ class Application(BaseModel):
 
 class PermissionRequest(BaseModel):
     request: str
+    subPermission: Optional[str] = None
     urgency: str
     timeRemaining: Optional[str] = None
 
@@ -224,9 +226,12 @@ async def add_permission_request(email: str, permission: PermissionRequest):
     user = db.users.find_one({"email": email})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    permission.subPermission = "hooooooo"
 
     new_permission = {
         "name": permission.request,
+        "subPermission": permission.subPermission,
         "urgency": permission.urgency,
         "timeRemaining": permission.timeRemaining,
         "status": "pending"
@@ -245,7 +250,7 @@ async def add_permission_request(email: str, permission: PermissionRequest):
             "permissions": [new_permission]
         })
 
-    if result.modified_count > 0 or result.inserted_id:
+    if result.inserted_id:
         return {"status": "success", "message": "Permission request added successfully"}
     else:
         raise HTTPException(status_code=500, detail="Failed to add permission request")
