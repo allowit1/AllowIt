@@ -188,7 +188,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://127.0.0.1:5001";
+        const API_BASE_URL = "http://55.144.90.189:5001";
         const adminEmail = localStorage.getItem("userEmail");
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -200,6 +200,8 @@
 
             initNewLevelPermissions(); // Initialize permissions for new level form
         });
+
+        ///////////////// Load Data Functions /////////////////
 
         async function loadAdminInfo() {
             try {
@@ -259,20 +261,6 @@
                 console.error("Error loading permission levels:", error);
             }
         }
-        async function addPermissionLevel(event) {
-            event.preventDefault();
-            const name = document.getElementById("newLevelName").value;
-            const permissions = getSelectedPermissions("newLevelAppPermissions");
-            console.log("Sending data:", { name, permissions });
-            try {
-                const response = await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
-                console.log("Response:", response.data);
-                closeModal('newLevelModal');
-                await loadPermissionLevels();
-            } catch (error) {
-                console.error("Error adding permission level:", error.response ? error.response.data : error.message);
-            }
-        }
 
         async function loadPendingRequests() {
             try {
@@ -285,8 +273,9 @@
                     const urgencyClass = request.urgency.toLowerCase();
                     li.innerHTML = `
                         <span  class="${urgencyClass}"">${request.name} - ${request.urgency}</span>
-                        <button class="btn btn-small" onclick="openHandleRequestModal('${request.id}')">Handle</button>
                     `;
+                    
+                    li.onclick = () => openHandleRequestModal('${request.id}');
                     requestsList.appendChild(li);
                 });
             } catch (error) {
@@ -337,6 +326,8 @@
         function toggleDarkMode() {
             document.body.classList.toggle("dark-mode");
         }
+
+        ///////////////// User Functions /////////////////
 
         function searchUsers() {
             const searchTerm = document.getElementById("userSearch").value.toLowerCase();
@@ -400,6 +391,23 @@
             }
         }
 
+        ///////////////// Permission-Level Functions /////////////////
+
+        async function addPermissionLevel(event) {
+            event.preventDefault();
+            const name = document.getElementById("newLevelName").value;
+            const permissions = getSelectedPermissions("newLevelAppPermissions");
+            console.log("Sending data:", { name, permissions });
+            try {
+                const response = await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
+                console.log("Response:", response.data);
+                closeModal('newLevelModal');
+                await loadPermissionLevels();
+            } catch (error) {
+                console.error("Error adding permission level:", error.response ? error.response.data : error.message);
+            }
+        }
+
         async function addPermissionLevel(event) {
             event.preventDefault();
             const name = document.getElementById("newLevelName").value;
@@ -448,6 +456,45 @@
             }
         }
 
+        function getSelectedPermissions(containerId) {
+            const container = document.getElementById(containerId);
+            const permissions = {};
+            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                const [appId, perm] = checkbox.name.split('_');
+                if (!permissions[appId]) permissions[appId] = [];
+                if (checkbox.checked) permissions[appId].push(perm);
+            });
+            return permissions;
+        }
+
+        async function populatePermissions(containerId, selectedPermissions = {}) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            try {
+                const response = await axios.get(`${API_BASE_URL}/applications`);
+                const applications = response.data;
+                applications.forEach(app => {
+                    const appDiv = document.createElement('div');
+                    appDiv.innerHTML = `
+                        <h4>${app.name}</h4>
+                        ${app.permissions.map(perm => `
+                            <label>
+                                <input type="checkbox" name="${app.id}_${perm}" 
+                                    ${selectedPermissions[app.id]?.includes(perm) ? 'checked' : ''}>
+                                ${perm}
+                            </label>
+                        `).join('')}
+                    `;
+                    container.appendChild(appDiv);
+                });
+            } catch (error) {
+                console.error("Error fetching applications:", error);
+            }
+        }
+
+        ///////////////// Request Functions /////////////////
+
         function openHandleRequestModal(requestId) {
             document.getElementById("requestId").value = requestId;
             openModal('handleRequestModal');
@@ -475,44 +522,6 @@
                 } catch (error) {
                     console.error("Error revoking permission:", error);
                 }
-            }
-        }
-
-        function getSelectedPermissions(containerId) {
-            const container = document.getElementById(containerId);
-            const permissions = {};
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                const [appId, perm] = checkbox.name.split('_');
-                if (!permissions[appId]) permissions[appId] = [];
-                if (checkbox.checked) permissions[appId].push(perm);
-            });
-            return permissions;
-        }
-
-        
-        async function populatePermissions(containerId, selectedPermissions = {}) {
-            const container = document.getElementById(containerId);
-            container.innerHTML = '';
-            try {
-                const response = await axios.get(`${API_BASE_URL}/applications`);
-                const applications = response.data;
-                applications.forEach(app => {
-                    const appDiv = document.createElement('div');
-                    appDiv.innerHTML = `
-                        <h4>${app.name}</h4>
-                        ${app.permissions.map(perm => `
-                            <label>
-                                <input type="checkbox" name="${app.id}_${perm}" 
-                                    ${selectedPermissions[app.id]?.includes(perm) ? 'checked' : ''}>
-                                ${perm}
-                            </label>
-                        `).join('')}
-                    `;
-                    container.appendChild(appDiv);
-                });
-            } catch (error) {
-                console.error("Error fetching applications:", error);
             }
         }
 
