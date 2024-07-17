@@ -215,9 +215,25 @@ class Program
         }
     }
 
+       static void PullFromGitHub(string baseDirectory)
+    {
+        try
+        {
+            RunGitCommand(baseDirectory, "pull");
+            Console.WriteLine("Changes pulled from GitHub successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while pulling from GitHub: {ex.Message}");
+        }
+    }
+
     static void Main(string[] args)
     {
         string baseDirectory = @"C:\Users\User\Documents\Automation_Test\AllowIt";
+
+         // Pull changes from GitHub
+        PullFromGitHub(baseDirectory);
 
         // AddPartner(baseDirectory, "example_group1", "benayat1", "write");
         // RemovePartner(baseDirectory, "example_group1", "maor-noy", "write");
@@ -229,8 +245,9 @@ class Program
         //AddPartner(baseDirectory, "example_group1", "yeretyn@gmail.com", "write");
         //AddPartner(baseDirectory, "example_group1", "manoy@g.jct.ac.il", "write");
         //AddPartner(baseDirectory, "example_group1", "YairLevi03", "write");
-        RemovePartner(baseDirectory, "example_group1", "benayat1", "write");
+        AddPartner(baseDirectory, "example_group1", "YakirMauda", "write");
 
+        // Push changes to GitHub
         PushToGitHub(baseDirectory, "Your commit message here");
     }
 }
