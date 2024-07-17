@@ -222,37 +222,39 @@ async def delete_permission_level(level_id: str):
 
 @app.post("/permission-request/{email}", response_model=Dict[str, str])
 async def add_permission_request(email: str, permission: PermissionRequest):
-    db = get_database()
-    user = db.users.find_one({"email": email})
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    permission.subPermission = "hooooooo"
+    try:
+        db = get_database()
+        user = db.users.find_one({"email": email})
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        permission.subPermission = "hooooooo"
 
-    new_permission = {
-        "name": permission.request,
-        "subPermission": permission.subPermission,
-        "urgency": permission.urgency,
-        "timeRemaining": permission.timeRemaining,
-        "status": "pending"
-    }
+        new_permission = {
+            "name": permission.request,
+            "subPermission": permission.subPermission,
+            "urgency": permission.urgency,
+            "timeRemaining": permission.timeRemaining,
+            "status": "pending"
+        }
 
-    user_permissions = db.permissions.find_one({"email": email})
+        user_permissions = db.permissions.find_one({"email": email})
 
-    if user_permissions:
-        result = db.permissions.update_one(
-            {"email": email},
-            {"$push": {"permissions": new_permission}}
-        )
-    else:
-        result = db.permissions.insert_one({
-            "email": email,
-            "permissions": [new_permission]
-        })
+        if user_permissions:
+            result = db.permissions.update_one(
+                {"email": email},
+                {"$push": {"permissions": new_permission}}
+            )
+        else:
+            result = db.permissions.insert_one({
+                "email": email,
+                "permissions": [new_permission]
+            })
 
-    if result.inserted_id:
-        return {"status": "success", "message": "Permission request added successfully"}
-    else:
+
+            return {"status": "success", "message": "Permission request added successfully"}
+
+    except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to add permission request")
 
 @app.get("/pending-requests", response_model=List[Permission])
@@ -264,7 +266,7 @@ async def get_pending_requests():
         for permission in user_permissions['permissions']:
             if permission['status'] == 'pending':
                 permission['id'] = str(user_permissions['_id'])
-                pending_requests.append(permission)
+                pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
     return pending_requests
 
 @app.post("/{action}-request/{request_id}")
