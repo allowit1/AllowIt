@@ -227,7 +227,7 @@ class Program
         //AddPartner(baseDirectory, "example_group1", "maornoy1310@gmail.com", "write");
         //AddPartner(baseDirectory, "example_group1", "yeretyn@gmail.com", "write");
         //AddPartner(baseDirectory, "example_group1", "manoy@g.jct.ac.il", "write");
-        RemovePartner(baseDirectory, "example_group1", "YairLevi03", "write");
+        AddPartner(baseDirectory, "example_group1", "YairLevi03", "write");
         RemovePartner(baseDirectory, "example_group1", "benayat1", "write");
 
         PushToGitHub(baseDirectory, "Your commit message here");
