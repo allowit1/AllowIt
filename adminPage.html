@@ -74,31 +74,31 @@
         </div>
     </div>
 
-    <!-- Modals -->
-    <div id="newUserModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal('newUserModal')">&times;</span>
-            <h2>Add New User</h2>
-            <form id="newUserForm">
-                <div class="form-group">
-                    <label for="newUserName">Name:</label>
-                    <input type="text" id="newUserName" required>
-                </div>
-                <div class="form-group">
-                    <label for="newUserEmail">Email:</label>
-                    <input type="email" id="newUserEmail" required>
-                </div>
-                <div class="form-group">
-                    <label for="newUserPhone">Phone:</label>
-                    <input type="tel" id="newUserPhone">
-                </div>
-                <div class="form-group">
-                    <label for="newUserLevel">Permission Level:</label>
-                    <select id="newUserLevel"></select>
-                </div>
-                <button type="submit" class="btn">Add User</button>
-            </form>
-        </div>
+   <!-- Modals -->
+   <div id="newUserModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeModal('newUserModal')">&times;</span>
+        <h2>Add New User</h2>
+        <form id="newUserForm">
+            <div class="form-group">
+                <label for="newUserName">Name:</label>
+                <input type="text" id="newUserName" required>
+            </div>
+            <div class="form-group">
+                <label for="newUserEmail">Email:</label>
+                <input type="email" id="newUserEmail" required>
+            </div>
+            <div class="form-group">
+                <label for="newUserPhone">Phone:</label>
+                <input type="tel" id="newUserPhone">
+            </div>
+            <div class="form-group">
+                <label for="newUserLevel">Permission Level:</label>
+                <select id="newUserLevel"></select>
+            </div>
+            <button type="submit" class="btn">Add User</button>
+        </form>
+     </div>
     </div>
 
     <div id="editUserModal" class="modal">
@@ -188,7 +188,7 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://55.144.90.189:5001";
+        const API_BASE_URL = "http://54.144.90.189:5001";
         const adminEmail = localStorage.getItem("userEmail");
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -237,6 +237,7 @@
             try {
                 const response = await axios.get(`${API_BASE_URL}/permission-levels`);
                 const levels = response.data;
+                console.log("Permission levels:", levels);
                 const levelList = document.getElementById("levelList");
                 const newUserLevel = document.getElementById("newUserLevel");
                 const editUserLevel = document.getElementById("editUserLevel");
@@ -252,7 +253,6 @@
                     levelList.appendChild(li);
 
                     const option = document.createElement("option");
-                    option.value = level.id;
                     option.textContent = level.name;
                     newUserLevel.appendChild(option.cloneNode(true));
                     editUserLevel.appendChild(option);
@@ -340,18 +340,30 @@
 
         async function addUser(event) {
             event.preventDefault();
-            const name = document.getElementById("newUserName").value;
-            const email = document.getElementById("newUserEmail").value;
-            const phone = document.getElementById("newUserPhone").value;
-            const permissionLevel = document.getElementById("newUserLevel").value;
+            const name = document.getElementById("newUserName").value.trim();
+            const email = document.getElementById("newUserEmail").value.trim();
+            const phone = document.getElementById("newUserPhone").value.trim();
+            const permissionLevel = document.getElementById("newUserLevel").value.trim();
+            console.log("Selected permission level:", permissionLevel);  // Add this line
+            const isAdmin = false;  // Set default value to false for new users
+            const userData = { name, email, phone, permissionLevel, isAdmin };
+            console.log("Sending user data:", userData);
             try {
-                await axios.post(`${API_BASE_URL}/users`, { name, email, phone, permissionLevel });
+                const response = await axios.post(`${API_BASE_URL}/users`, userData);
+                console.log("Response:", response.data);
+                clearAddUserForm();
                 closeModal('newUserModal');
                 await loadUsers();
-            } catch (error) {
-                console.error("Error adding user:", error);
+            }
+            catch (error) {
+                console.error("Error adding user:", error.response ? error.response.data : error.message);
+                if (error.response && error.response.data) {
+                    console.error("Detailed error:", JSON.stringify(error.response.data, null, 2));
+                }
             }
         }
+    
+
 
         function editUser(user) {
             document.getElementById("editUserId").value = user.id;
@@ -383,6 +395,8 @@
             if (confirm("Are you sure you want to delete this user?")) {
                 try {
                     await axios.delete(`${API_BASE_URL}/users/${id}`);
+                    // TODO: ADD CODE TO REVOKE PERMISSIONS
+                    clearAllPermissions();
                     closeModal('editUserModal');
                     await loadUsers();
                 } catch (error) {
@@ -540,6 +554,24 @@
         window.onclick = function(event) {
             if (event.target.className === 'modal') {
                 event.target.style.display = "none";
+            }
+        }
+        function clearAddUserForm() {
+            document.getElementById("newUserName").value = "";
+            document.getElementById("newUserEmail").value = "";
+            document.getElementById("newUserPhone").value = "";
+            document.getElementById("newUserLevel").value = ""; // or set it to a default value if needed
+        }
+
+        ///////////////// Clear All Permissions /////////////////
+        //implement this function to clear all permissions
+        //NOT IMPLEMENTED
+        async function clearAllPermissions() {
+            try {
+                await axios.delete(`${API_BASE_URL}/clear-permissions`);
+                await loadApprovedPermissions();
+            } catch (error) {
+                console.error("Error clearing permissions:", error);
             }
         }
     </script>

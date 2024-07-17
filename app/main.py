@@ -6,6 +6,7 @@ import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
+import logging
 
 app = FastAPI()
 
@@ -66,11 +67,11 @@ class PermissionRequest(BaseModel):
     timeRemaining: Optional[str] = None
 
 class User(BaseModel):
-    name: str
-    email: str
-    phone: str
-    permissionLevel: str
-    isAdmin: bool
+    name: Optional[str]
+    email: Optional[str]
+    phone: Optional[str]
+    permissionLevel: Optional[str]
+    isAdmin: Optional[bool] = False
 
 
 class AppPermission(BaseModel):
@@ -344,9 +345,11 @@ async def get_permissions(email: str):
         raise HTTPException(status_code=404, detail="Permissions not found")
     return perm["permissions"]
 
+
+
 @app.post ("/users" , response_model=User)
 async def add_user(user_data: dict):
-    
+
     db = get_database()
     name = user_data['name']
     email = user_data['email']
@@ -359,7 +362,7 @@ async def add_user(user_data: dict):
         name=name,
         email=email,
         phone=phone,
-        permissionLevel=permissionLevel,
+        permissionLevel=permissionLevel.name,
         isAdmin=False
     )
     result = db.users.insert_one(new_user.dict())
@@ -367,6 +370,6 @@ async def add_user(user_data: dict):
         return new_user
     else:
         raise HTTPException(status_code=500, detail="Failed to add user")
-
+    
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
