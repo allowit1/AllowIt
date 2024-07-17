@@ -9,11 +9,9 @@ from bson import ObjectId
 
 app = FastAPI()
 
-origins = ['http://localhost:5050', 'https://localhost:3000']
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -254,8 +252,7 @@ async def add_permission_request(email: str, permission: PermissionRequest):
                 "permissions": [new_permission]
             })
 
-
-            return {"status": "success", "message": "Permission request added successfully"}
+        return {"status": "success", "message": "Permission request added successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to add permission request")
@@ -269,20 +266,24 @@ async def get_pending_requests():
         for permission in user_permissions['permissions']:
             if permission['status'] == 'pending':
                 permission['id'] = str(user_permissions['_id'])
-                pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
+                # pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
+                pending_requests.append(permission)
+                print(permission)
     return pending_requests
 
+#TODO: change the reson to be sent into messages table, and fux the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
-    if action not in ["approve", "deny"]:
+
+    if action not in ["approve", "deny"]: # if action is not approve or deny raise an error
         raise HTTPException(status_code=400, detail="Invalid action")
     
-    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)})
-    if not user_permissions:
+    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)}) # find the request by id
+    if not user_permissions: # if request not found raise an error
         raise HTTPException(status_code=404, detail="Request not found")
     
-    for permission in user_permissions['permissions']:
+    for permission in user_permissions['permissions']: # loop through all permissions and update the status
         if permission['status'] == 'pending':
             permission['status'] = 'approved' if action == 'approve' else 'denied'
             permission['reason'] = reason
