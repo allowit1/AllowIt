@@ -188,7 +188,8 @@
     </div>
 
     <script>
-        const API_BASE_URL = "http://55.144.90.189:5001";
+        // const API_BASE_URL = "http://54.144.90.189:5001";
+        const API_BASE_URL = "http://127.0.0.1:5001";
         const adminEmail = localStorage.getItem("userEmail");
 
         document.addEventListener("DOMContentLoaded", async () => {
@@ -271,8 +272,12 @@
                 requests.forEach(request => {
                     const li = document.createElement("li");
                     const urgencyClass = request.urgency.toLowerCase();
+
                     li.innerHTML = `
-                        <span  class="${urgencyClass}"">${request.name} - ${request.urgency}</span>
+                        <div class="request-info">
+                            <span>${request.name} - ${request.subPermission}</span>
+                            <span>${name}</span>
+                        </div>
                     `;
                     
                     li.onclick = () => openHandleRequestModal('${request.id}');
