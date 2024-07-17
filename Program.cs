@@ -230,7 +230,7 @@ class Program
 
     static void Main(string[] args)
     {
-        string baseDirectory = @"C:\Users\User\Documents\Automation_Test\AllowIt";
+        string baseDirectory = @"C:\Users\User\Documents\AllowIt";
 
          // Pull changes from GitHub
         PullFromGitHub(baseDirectory);

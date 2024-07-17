@@ -57,11 +57,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\User\\Documents\\Automation_Test\\AllowIt\\AllowIt.csproj",
+      "projectUniqueName": "C:\\Users\\User\\Documents\\AllowIt\\AllowIt.csproj",
       "projectName": "AllowIt",
-      "projectPath": "C:\\Users\\User\\Documents\\Automation_Test\\AllowIt\\AllowIt.csproj",
+      "projectPath": "C:\\Users\\User\\Documents\\AllowIt\\AllowIt.csproj",
       "packagesPath": "C:\\Users\\User\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\User\\Documents\\Automation_Test\\AllowIt\\obj\\",
+      "outputPath": "C:\\Users\\User\\Documents\\AllowIt\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
