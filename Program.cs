@@ -22,7 +22,7 @@ class Program
         UpdateGroupFile(groupData, fullGroupName, partner);
 
         // Remove from other access types in group file
-        RemoveFromOtherAccessTypes(groupData, group, partner, accessType);
+        RemoveFromOtherAccessTypes(groupData, group, partner, accessType, baseDirectory);
 
         // Update repo file
         UpdateRepoFile(repoData, group, accessType);
@@ -44,7 +44,7 @@ class Program
         }
     }
 
-    static void RemoveFromOtherAccessTypes(Dictionary<string, List<string>> groupData, string group, string partner, string currentAccessType)
+    static void RemoveFromOtherAccessTypes(Dictionary<string, List<string>> groupData, string group, string partner, string currentAccessType, string baseDirectory)
     {
         string[] allAccessTypes = { "read", "triage", "write" };
         foreach (var accessType in allAccessTypes)
@@ -59,6 +59,7 @@ class Program
                     {
                         groupData.Remove(groupName);
                     }
+                    PushToGitHub(baseDirectory, "Your commit message here");
                 }
             }
         }
@@ -228,7 +229,7 @@ class Program
         //AddPartner(baseDirectory, "example_group1", "yeretyn@gmail.com", "write");
         //AddPartner(baseDirectory, "example_group1", "manoy@g.jct.ac.il", "write");
         //AddPartner(baseDirectory, "example_group1", "YairLevi03", "write");
-        //RemovePartner(baseDirectory, "example_group1", "benayat1", "write");
+        RemovePartner(baseDirectory, "example_group1", "benayat1", "write");
 
         PushToGitHub(baseDirectory, "Your commit message here");
     }
