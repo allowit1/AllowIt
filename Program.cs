@@ -10,7 +10,7 @@ class Program
 {
     static void AddPartner(string baseDirectory, string group, string partner, string accessType)
     {
-        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomation.yml");
+        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomationInAllowIt.yml");
         string repoFilePath = Path.Combine(baseDirectory, "repos", "Example_Repo.yml");
         
         var groupData = ReadYaml(groupFilePath);
@@ -83,7 +83,7 @@ class Program
 
     static void RemovePartner(string baseDirectory, string group, string partner, string accessType)
     {
-        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomation.yml");
+        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomationInAllowIt.yml");
         string repoFilePath = Path.Combine(baseDirectory, "repos", "Example_Repo.yml");
         
         var groupData = ReadYaml(groupFilePath);
@@ -233,7 +233,7 @@ class Program
         string baseDirectory = @"C:\Users\User\Documents\Automation_Test\AllowIt";
 
          // Pull changes from GitHub
-        PullFromGitHub(baseDirectory);
+        //PullFromGitHub(baseDirectory);
 
         // AddPartner(baseDirectory, "example_group1", "benayat1", "write");
         // RemovePartner(baseDirectory, "example_group1", "maor-noy", "write");
