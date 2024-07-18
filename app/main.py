@@ -90,7 +90,7 @@ async def delete_user(user_id: str):
 async def get_permission_levels():
     db = get_database()
     levels = list(db.permission_levels.find())
-    return [PermissionLevel(id=str(level['_id']), name=level['name'], Permissions=level['Permissions']) for level in levels]
+    return [PermissionLevel(id=str(level['_id']), appName=level['name'], Permissions=level['Permissions']) for level in levels]
 
 
 @app.post("/permission-levels", response_model=PermissionLevel)
@@ -109,12 +109,12 @@ async def add_permission_level(level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                appName=app['name'],
                 permissions=perms
             ))
 
     new_level = PermissionLevel(
-        name=name,
+        appName=name,
         Permissions=app_permissions
     )
 
@@ -137,13 +137,13 @@ async def update_permission_level(level_id: str, level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                appName=app['name'],
                 permissions=perms
             ))
 
     updated_level = PermissionLevel(
         id=level_id,
-        name=name,
+        appName=name,
         Permissions=app_permissions
     )
 
@@ -174,8 +174,8 @@ async def add_permission_request(email: str, permission: PermissionRequest):
             raise HTTPException(status_code=404, detail="User not found")
 
         new_permission = {
-            "name": permission.request,
-            "subPermission": permission.subPermission,
+            "name": permission.appName,
+            "subPermission": permission.permissionName,
             "urgency": permission.urgency,
             "timeRemaining": permission.timeRemaining,
             "status": "pending"

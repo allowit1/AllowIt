@@ -25,8 +25,8 @@ class Application(BaseModel):
 
 # Model for permission requests
 class PermissionRequest(BaseModel):
-    request: str
-    subPermission: Optional[str] = None
+    appName: str
+    permissionName: Optional[str] = None
     urgency: str
     timeRemaining: Optional[str] = None
 
@@ -34,16 +34,16 @@ class PermissionRequest(BaseModel):
 class User(BaseModel):
     name: str
     email: str
-    phone: str
+    gitHub: str
     permissionLevel: str
     isAdmin: bool
 
 # Model for appPermissions
 class AppPermission(BaseModel):
-    name: str
+    appName: str
     permissions: List[str]
 
 # Model for permission levels
 class PermissionLevel(BaseModel):
-    name: str
+    appName: str
     Permissions: List[AppPermission]
