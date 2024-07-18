@@ -522,6 +522,12 @@
             document.getElementById("requestId").value = requestId;
             openModal('handleRequestModal');
         }
+
+
+
+
+
+        
         async function handleRequest(action) {
             const requestId = document.getElementById("requestId").value;
             console.log("Handling request for ID:", requestId);
@@ -541,10 +547,12 @@
             }
 
             console.log("Handling request:", { requestId, action, reason, timeRemaining });
-            const payload = { reason, expiryTime: timeRemaining };
 
             try {
-                const response = await axios.post(`${API_BASE_URL}/${action}-pending-request/${requestId}`, reason, timeRemaining);
+                const response = await axios.post(`${API_BASE_URL}/${action}-pending-request/${requestId}`, {
+                    reason: reason,
+                    timeRemaining: timeRemaining
+                });
                 console.log("Response:", response.data);
                 closeModal('handleRequestModal');
                 await loadPendingRequests();
@@ -554,6 +562,8 @@
                 alert(`Failed to ${action} request. Please try again.`);
             }
         }
+
+
         async function revokePermission(permissionId) {
             if (confirm("Are you sure you want to revoke this permission?")) {
                 try {
