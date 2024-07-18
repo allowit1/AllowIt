@@ -256,6 +256,9 @@
             event.preventDefault();
             const applicationSelect = document.getElementById("application");
             const request = applicationSelect.options[applicationSelect.selectedIndex].text;
+
+            const permissionSelect = document.getElementById("subPermission");
+            const permission = permissionSelect.options[permissionSelect.selectedIndex].text;
             const urgency = document.querySelector('input[name="urgency"]:checked').value;
             const time = document.getElementById("time").value;
             const days = document.getElementById("days").value;
@@ -272,6 +275,7 @@
                 // Send the request to the server
                 const response = await axios.post(`${API_BASE_URL}/permission-request/${userEmail}`, {
                     request,
+                    permission,
                     urgency,
                     timeRemaining
                 });
@@ -296,7 +300,41 @@
                 option.textContent = app.name;
                 applicationSelect.appendChild(option);
             });
+
+            // Add event listener for application selection
+            applicationSelect.addEventListener('change', handleApplicationChange);
         }
+        async function handleApplicationChange(event) {
+            const selectedApp = event.target.options[event.target.selectedIndex].text;
+            if (selectedApp !== "Choose an application") {
+                await populatePermissionOptions(selectedApp);
+            } else {
+                // Clear permission options if no app is selected
+                const permissionSelect = document.getElementById("subPermission");
+                permissionSelect.innerHTML = '<option value="">Choose a permission</option>';
+            }
+        }
+
+
+        // Populate the permission options in the form
+        async function populatePermissionOptions(request) {
+            const permissionSelect = document.getElementById("subPermission");
+            permissionSelect.innerHTML = '<option value="">Choose a permission</option>';
+            try {
+                const result = await axios.get(`${API_BASE_URL}/application/${request}`);
+                const permissions = result.data.permissions;
+                permissions.forEach(permission => {
+                    const option = document.createElement("option");
+                    option.value = permission;
+                    option.textContent = permission;
+                    permissionSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching permissions for application:', error);
+                permissionSelect.innerHTML = '<option value="">Error loading permissions</option>';
+            }
+        }
+
     </script>
 </body>
 </html>
