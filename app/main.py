@@ -106,8 +106,8 @@ class User(BaseModel):
 
 
 class AppPermission(BaseModel):
-    name: str
-    permissions: List[str]
+    email: str
+    permissions: Permission
 
 class PermissionLevel(BaseModel):
     name: str
@@ -178,7 +178,7 @@ async def add_permission_level(level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                email=app['name'],
                 permissions=perms
             ))
 
@@ -210,7 +210,7 @@ async def update_permission_level(level_id: str, level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                email=app['name'],
                 permissions=perms
             ))
 
@@ -301,29 +301,28 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
     user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)})
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Request not found")
-    
-    for permission in user_permissions['permissions']:
-        if permission['status'] == 'pending':
-            if action == "approve":
-                # aprroved here
-                handle_approve_request(user_permissions, permission)
-                permission['status'] = 'approved'
-                if expiryTime:
-                    permission['timeRemaining'] = f"{expiryTime} seconds"
-                    # Schedule revocation
-                    revocation_time = datetime.now() + timedelta(minutesS=expiryTime)
-                    scheduler.add_job(revoke_permission, 'date', run_date=revocation_time, args=[str(user_permissions['_id'])])
-            elif action == "deny":
-                permission['status'] = 'denied'
+    permission= user_permissions['permissions']
+    if permission['status'] == 'pending':
+        if action == "approve":
+            # aprroved here
+            handle_approve_request(user_permissions, permission)
+            permission['status'] = 'approved'
             if expiryTime:
-                permission['timeRemaining'] = f"{expiryTime} hours"
+                permission['timeRemaining'] = f"{expiryTime} seconds"
+                # Schedule revocation
+                revocation_time = datetime.now() + timedelta(minutesS=expiryTime)
+                scheduler.add_job(revoke_permission, 'date', run_date=revocation_time, args=[str(user_permissions['_id'])])
+        elif action == "deny":
+                permission['status'] = 'denied'
+        if expiryTime:
+            permission['timeRemaining'] = f"{expiryTime} hours"
     
-    revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
-    scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
+    # revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
+    # scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
     ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
-        {"$set": {"permissions": user_permissions['permissions']}}
+        {"$set": {""}}
     )
 
     if result.modified_count:
@@ -371,8 +370,8 @@ async def revoke_permission(permission_id: str):
     user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Permission not found")
-    
-    for permission in user_permissions['permissions']:
+    permission = user_permissions['permissions']
+    if permission[status] == 'approved':
         if permission['status'] == 'approved':
             # handel revoke here
             permission['status'] = 'revoked'
