@@ -1,4 +1,3 @@
-from app.github_client_add import add_collaborator
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
