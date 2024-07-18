@@ -1,6 +1,8 @@
+from github_client import add_collaborator
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+import asyncio
 from typing import List, Optional, Dict
 import uvicorn
 from pymongo import MongoClient
@@ -10,6 +12,12 @@ import sched
 import random
 import time
 from datetime import datetime, timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.jobstores.memory import MemoryJobStore
+
+
+
+scheduler = AsyncIOScheduler(jobstores={'default': MemoryJobStore()})
 
 app = FastAPI()
 
@@ -98,8 +106,8 @@ class User(BaseModel):
 
 
 class AppPermission(BaseModel):
-    name: str
-    permissions: List[str]
+    email: str
+    permissions: Permission
 
 class PermissionLevel(BaseModel):
     name: str
@@ -170,7 +178,7 @@ async def add_permission_level(level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                email=app['name'],
                 permissions=perms
             ))
 
@@ -202,7 +210,7 @@ async def update_permission_level(level_id: str, level_data: dict):
         app = db.applications.find_one({"_id": ObjectId(app_id)})
         if app:
             app_permissions.append(AppPermission(
-                name=app['name'],
+                email=app['name'],
                 permissions=perms
             ))
 
@@ -276,48 +284,72 @@ async def get_pending_requests():
                 pending_requests.append(permission)
     return pending_requests
 
-scheduler = sched.scheduler(time.time, time.sleep)
+#TODO: change the reson to be sent into messages table, and fux the code
+from datetime import datetime, timedelta
 
+def handle_approve_request(permission_request, permission):
+    if permission.get("name", "").lower() == "github":
+        add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
 
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
 
-    if action not in ["approve", "deny"]: # if action is not approve or deny raise an error
+    if action not in ["approve", "deny"]:
         raise HTTPException(status_code=400, detail="Invalid action")
     
-    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)}) # find the request by id
-    if not user_permissions: # if request not found raise an error
+    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)})
+    if not user_permissions:
         raise HTTPException(status_code=404, detail="Request not found")
-    
-    for permission in user_permissions['permissions']: # loop through all permissions and update the status
-        if permission['status'] == 'pending':
-            if action == "approve":
-                permission['status'] = 'approved'
-            elif action == "deny":
-                permission['status'] = 'denied'
+    permission= user_permissions['permissions']
+    if permission['status'] == 'pending':
+        if action == "approve":
+            # aprroved here
+            handle_approve_request(user_permissions, permission)
+            permission['status'] = 'approved'
             if expiryTime:
-                permission['timeRemaining'] = f"{expiryTime} hours"
+                permission['timeRemaining'] = f"{expiryTime} seconds"
+                # Schedule revocation
+                revocation_time = datetime.now() + timedelta(minutesS=expiryTime)
+                scheduler.add_job(revoke_permission, 'date', run_date=revocation_time, args=[str(user_permissions['_id'])])
+        elif action == "deny":
+                permission['status'] = 'denied'
+        if expiryTime:
+            permission['timeRemaining'] = f"{expiryTime} hours"
     
     # revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
     # scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
     ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
-        {"$set": {"permissions": user_permissions['permissions']}}
+        {"$set": {""}}
     )
 
     if result.modified_count:
-        user = db.messages.find_one({"email": user_permissions['email']})
         message = f"Your request for {user_permissions['permissions'][0]['name']} has been {action}ed"
-        if not user:
-            db.messages.insert_one({"email": user_permissions['email'], "messages": [message]})
-        else:
-            db.messages.update_one({"email": user_permissions['email']}, {"$push": {"messages": message}})
+        if reason:
+            message += f". Reason: {reason}"
+        
+        db.messages.update_one(
+            {"email": user_permissions['email']},
+            {"$push": {"messages": message}},
+            upsert=True
+        )
      
         return {"status": "success"}
     raise HTTPException(status_code=500, detail="Failed to update request")
 
+# Make sure this function is defined
+async def revoke_permission(permission_id: str):
+    db = get_database()
+    result = db.permissions.update_one(
+        {"_id": ObjectId(permission_id), "permissions.status": "approved"},
+        {"$set": {"permissions.$.status": "revoked"}}
+    )
+    if result.modified_count:
+        print(f"Permission {permission_id} has been automatically revoked.")
+    else:
+        print(f"Failed to revoke permission {permission_id}.")
 @app.get("/approved-permissions", response_model=List[Permission])
 async def get_approved_permissions():
     '''
@@ -338,9 +370,10 @@ async def revoke_permission(permission_id: str):
     user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Permission not found")
-    
-    for permission in user_permissions['permissions']:
+    permission = user_permissions['permissions']
+    if permission[status] == 'approved':
         if permission['status'] == 'approved':
+            # handel revoke here
             permission['status'] = 'revoked'
     
     result = db.permissions.update_one(
@@ -351,6 +384,7 @@ async def revoke_permission(permission_id: str):
     if result.modified_count:
         return {"status": "success"}
     raise HTTPException(status_code=500, detail="Failed to revoke permission")
+
 
 @app.get("/applications", response_model=List[Application])
 async def get_applications():
