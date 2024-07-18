@@ -165,35 +165,37 @@ async def get_permission_levels():
 
 @app.post("/permission-levels", response_model=PermissionLevel)
 async def add_permission_level(level_data: dict):
-    db = get_database()
-    name = level_data['name']
-    permissions = level_data['permissions']
+    try:
+        db = get_database()
+        name = level_data['name']
+        permissions = level_data['permissions']
+        existing_level = db.permission_levels.find_one({"name": name})
+        if existing_level:
+            raise HTTPException(status_code=400, detail="Permission level already exists")
 
-    existing_level = db.permission_levels.find_one({"name": name})
-    if existing_level:
-        raise HTTPException(status_code=400, detail="Permission level already exists")
+        app_permissions = []
+        for app_id, perms in permissions.items():
+            app = db.applications.find_one({"_id": ObjectId(app_id)})
+            if app:
+                app_permissions.append(AppPermission(
+                    name=app['name'],
+                    permissions=perms
+                ))
 
-    app_permissions = []
-    for app_id, perms in permissions.items():
-        app = db.applications.find_one({"_id": ObjectId(app_id)})
-        if app:
-            app_permissions.append(AppPermission(
-                email=app['name'],
-                permissions=perms
-            ))
+        new_level = PermissionLevel(
+            name=name,
+            Permissions=app_permissions
+        )
 
-    new_level = PermissionLevel(
-        name=name,
-        Permissions=app_permissions
-    )
+        result = db.permission_levels.insert_one(new_level.dict())
 
-    result = db.permission_levels.insert_one(new_level.dict())
-
-    if result.inserted_id:
-        return new_level
-    else:
-       database.permission_level.insert_one(level)
-    raise HTTPException(status_code=500, detail="Failed to add permission level")
+        if result.inserted_id:
+            new_level.id = str(result.inserted_id)
+            return new_level
+        else:
+            raise HTTPException(status_code=500, detail="Failed to add permission level")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
 async def update_permission_level(level_id: str, level_data: dict):
