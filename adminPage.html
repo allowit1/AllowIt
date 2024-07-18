@@ -75,8 +75,8 @@
                 <input type="email" id="newUserEmail" required>
             </div>
             <div class="form-group">
-                <label for="newUserPhone">Phone:</label>
-                <input type="tel" id="newUserPhone">
+                <label for="newUserPhone">GitHub:</label>
+                <input type="text" id="newUserGitHub">
             </div>
             <div class="form-group">
                 <label for="newUserLevel">Permission Level:</label>
@@ -102,8 +102,8 @@
                     <input type="email" id="editUserEmail" required>
                 </div>
                 <div class="form-group">
-                    <label for="editUserPhone">Phone:</label>
-                    <input type="tel" id="editUserPhone">
+                    <label for="editUserGitHub">GitHub:</label>
+                    <input type="text" id="editUserGitHub">
                 </div>
                 <div class="form-group">
                     <label for="editUserLevel">Permission Level:</label>
@@ -151,6 +151,7 @@
         </div>
     </div>
 
+    <!-- TODO: add reason hint -->
     <div id="handleRequestModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal('handleRequestModal')">&times;</span>
@@ -163,7 +164,11 @@
                 </div>
                 <div class="form-group">
                     <label for="requestTime">Time (hours):</label>
-                    <input type="number" id="requestTime" min="1">
+                    <input type="number" id="requestTime" min="1" max="24">
+                </div>
+                <div class="form-group">
+                    <label for="requestDays">Time (days):</label>
+                    <input type="number" id="requestDays" min="1" max="360">
                 </div>
                 <div class="button-group">
                     <button type="button" class="btn" onclick="handleRequest('approve')">Approve</button>
@@ -184,12 +189,12 @@
             await loadPermissionLevels();
             await loadPendingRequests();
             await loadApprovedPermissions();
-
-            initNewLevelPermissions(); // Initialize permissions for new level form
+            await populatePermissions("newLevelAppPermissions"); // Initialize permissions for new level form
         });
 
         ///////////////// Load Data Functions /////////////////
 
+        // Load admin info from the server
         async function loadAdminInfo() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/user-details/${adminEmail}`);
@@ -199,16 +204,18 @@
             } catch (error) {
                 console.error("Error loading admin info:", error);
                 // Redirect to login page if error occurs
-                window.location.href = "loginPage.html";
+                window.location.href = "index.html";
             }
         }
 
+        // Load users from the server
         async function loadUsers() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/users`);
                 const users = response.data;
                 const userList = document.getElementById("userList");
                 userList.innerHTML = '';
+                // Loop through the users and add them to the list
                 users.forEach(user => {
                     const li = document.createElement("li");
                     li.textContent = `${user.name} - ${user.email} - ${user.permissionLevel}`;
@@ -220,6 +227,7 @@
             }
         }
 
+        // Load permission levels from the server
         async function loadPermissionLevels() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/permission-levels`);
@@ -234,13 +242,14 @@
                 editUserLevel.innerHTML = '';
                 
                 levels.forEach(level => {
+                    console.log(level)
                     const li = document.createElement("li");
-                    li.textContent = level.name;
+                    li.textContent = level.levelName;
                     li.onclick = () => editPermissionLevel(level);
                     levelList.appendChild(li);
 
                     const option = document.createElement("option");
-                    option.textContent = level.name;
+                    option.textContent = level.levelName;
                     newUserLevel.appendChild(option.cloneNode(true));
                     editUserLevel.appendChild(option);
                 });
@@ -257,23 +266,26 @@
                 requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
-                    const urgencyClass = request.urgency.toLowerCase();
-
+                    const urgencyClass = request.permission.urgency && typeof request.permission.urgency.toLowerCase === 'function' 
+                        ? request.permission.urgency.toLowerCase() 
+                        : 'unknown';
                     li.innerHTML = `
-                        <div class="request-info">
-                            <span>${request.name} - ${request.subPermission}</span>
-                            <span>${name}</span>
+                        <div class="request-info urgency ${urgencyClass}">
+                            <span>${request.permission.appName} - ${request.permission.permissionName}</span>
+                            <span>${request.userName}</span>
                         </div>
                     `;
                     
+                    // Use the correct ID from the request object
                     li.onclick = () => openHandleRequestModal(request.id);
                     requestsList.appendChild(li);
                 });
             } catch (error) {
                 console.error("Error loading pending requests:", error);
+                document.getElementById("pendingList").innerHTML = 
+                    '<li class="error-message">Error loading pending requests. Please try again later.</li>';
             }
         }
-
         async function loadApprovedPermissions() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
@@ -501,25 +513,47 @@
         ///////////////// Request Functions /////////////////
 
         function openHandleRequestModal(requestId) {
+            console.log("Opening modal for request ID:", requestId);
+            if (!requestId) {
+                console.error("Attempt to open modal with undefined requestId");
+                alert("Error: Invalid request. Please try again.");
+                return;
+            }
             document.getElementById("requestId").value = requestId;
             openModal('handleRequestModal');
         }
-
         async function handleRequest(action) {
             const requestId = document.getElementById("requestId").value;
+            console.log("Handling request for ID:", requestId);
+            if (!requestId) {
+                console.error("Request ID is missing");
+                alert("Error: Request ID is missing. Please try again.");
+                return;
+            }
+
             const reason = document.getElementById("requestReason").value;
             const time = document.getElementById("requestTime").value;
-            console.log("Handling request:", { requestId, action, reason, time });
+            const days = document.getElementById("requestDays").value;
+
+            let timeRemaining = null;
+            if (time || days) {
+                timeRemaining = parseInt(time || 0) + parseInt(days || 0) * 24;
+            }
+
+            console.log("Handling request:", { requestId, action, reason, timeRemaining });
+            const payload = { reason, expiryTime: timeRemaining };
+
             try {
-                await axios.post(`${API_BASE_URL}/${action}-request/${requestId}`, { reason, expiryTime: parseInt(time) });
+                const response = await axios.post(`${API_BASE_URL}/${action}-pending-request/${requestId}`, reason, timeRemaining);
+                console.log("Response:", response.data);
                 closeModal('handleRequestModal');
                 await loadPendingRequests();
                 await loadApprovedPermissions();
             } catch (error) {
-                console.error(`Error ${action}ing request:`, error);
+                console.error(`Error ${action}ing request:`, error.response ? error.response.data : error);
+                alert(`Failed to ${action} request. Please try again.`);
             }
         }
-
         async function revokePermission(permissionId) {
             if (confirm("Are you sure you want to revoke this permission?")) {
                 try {
@@ -530,11 +564,6 @@
                     console.error("Error revoking permission:", error);
                 }
             }
-        }
-
-        // Add this function to initialize the permission checkboxes when adding a new level
-        function initNewLevelPermissions() {
-            populatePermissions("newLevelAppPermissions");
         }
 
         // Event listeners

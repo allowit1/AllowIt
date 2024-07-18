@@ -17,7 +17,6 @@
             <div class="user-info">
                 <p><strong>Name:</strong> <span id="userName"></span></p>
                 <p><strong>Email:</strong> <span id="userEmail"></span></p>
-                <p><strong>Phone:</strong> <span id="userPhone"></span></p>
                 <p><strong>Permission level:</strong> <span id="userPermissionLevel"></span></p>
             </div>
         </div>
@@ -55,10 +54,10 @@
                     <label for="application">Select Application:</label>
                     <select id="application" required></select>
                 </div>
-                <!-- <div class="form-group">
-                    <label for="subPermission">Select Permission:</label>
-                    <select id="subPermission" required></select>
-                </div> -->
+                <div class="form-group">
+                    <label for="permissionName">Select Permission:</label>
+                    <select id="permissionName" required></select>
+                </div>
                 
                 <div class="form-group">
                     <label for="reason">Reason for Request:</label>
@@ -81,7 +80,7 @@
                         </div>
                         <div class="form-group">
                             <label for="days">Time Required (days):</label>
-                            <input type="number" id="days" min="1" max="30" placeholder="Optional">
+                            <input type="number" id="days" min="1" max="365" placeholder="Optional">
                         </div>
                     </div>
                 </div>
@@ -95,13 +94,14 @@
         // const API_BASE_URL= "http://55.144.90.189:5001";
         const API_BASE_URL= "http://localhost:5001";
         // Get the user email from localStorage
+        //TODO: change to cookies(optional])
         const userEmail = localStorage.getItem("userEmail");
 
         // On page load, fetch user details and display them
         document.addEventListener("DOMContentLoaded", async () => {
             console.log("User email from localStorage:", userEmail);
 
-            if (userEmail) {
+            if (userEmail){
                 try {
                     console.log("Attempting to fetch user details for email:", userEmail);
                     const response = await axios.get(`${API_BASE_URL}/user-details/${userEmail}`);
@@ -117,12 +117,10 @@
                     // Display user details on the page
                     const userNameElement = document.getElementById("userName");
                     const userEmailElement = document.getElementById("userEmail");
-                    const userPhoneElement = document.getElementById("userPhone");
                     const userPermissionLevelElement = document.getElementById("userPermissionLevel");
 
                     if (userNameElement) userNameElement.textContent = user.name;
-                    if (userEmailElement) userEmailElement.textContent = user.email
-                    if (userPhoneElement) userPhoneElement.textContent = user.phone;
+                    if (userEmailElement) userEmailElement.textContent = user.email;
                     if (userPermissionLevelElement) userPermissionLevelElement.textContent = user.permissionLevel;
 
                     // Load messages, permissions, and applications
@@ -142,12 +140,12 @@
                         console.error('Error', error.message);
                     }
                     alert("Error fetching user information. Please try logging in again.");
-                    window.location.href = 'loginPage.html';
+                    window.location.href = 'index.html';
                 }
             } else {
                 console.error("User email is missing in localStorage");
                 alert("User email is missing. Please log in again.");
-                window.location.href = 'loginPage.html';
+                window.location.href = 'index.html';
             }
         });
 
@@ -216,7 +214,9 @@
                 permissions.forEach(permission => {
                     const li = document.createElement("li");
                     const statusClass = permission.status.toLowerCase();
-                    li.innerHTML = `${permission.name} - ${permission.urgency} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span>`;
+                    const urgencyClass = permission.urgency.toLowerCase();
+                    //TODO: add color to urgency and time
+                    li.innerHTML = `<div class="request-info">${permission.appName} - ${permission.permissionName} ${permission.timeRemaining ? `<span class="time-remaining">${permission.timeRemaining}</span>` : ''} <span class="status ${statusClass}">${permission.status}</span></div>`;
                     permissionsList.appendChild(li);
                 });
             } catch (error) {
@@ -250,35 +250,33 @@
         }
 
 
-        // Submit a permission request to the server
         async function submitPermissionRequest(event) {
-            // Get the data from the form
             event.preventDefault();
             const applicationSelect = document.getElementById("application");
-            const request = applicationSelect.options[applicationSelect.selectedIndex].text;
-
-            const permissionSelect = document.getElementById("subPermission");
-            const permission = permissionSelect.options[permissionSelect.selectedIndex].text;
+            const appName = applicationSelect.options[applicationSelect.selectedIndex].text;
+            const permissionSelect = document.getElementById("permissionName");
+            const permissionName = permissionSelect.options[permissionSelect.selectedIndex].text;
             const urgency = document.querySelector('input[name="urgency"]:checked').value;
-            const time = document.getElementById("time").value;
+            const reason = document.getElementById("reason").value;
+            const hours = document.getElementById("time").value;
             const days = document.getElementById("days").value;
 
-            // Calculate timeRemaining
             let timeRemaining = null;
-            if (time) {
-                timeRemaining = `${time} hours`;
-            } else if (days) {
-                timeRemaining = `${days} days`;
+            if (hours || days) {
+                timeRemaining = parseInt(days) * 24 + parseInt(hours);
             }
 
             try {
-                // Send the request to the server
                 const response = await axios.post(`${API_BASE_URL}/permission-request/${userEmail}`, {
-                    request,
-                    permission,
-                    urgency,
-                    timeRemaining
+                    email: userEmail,
+                    appName: appName,
+                    permissionName: permissionName,
+                    urgency: urgency,
+                    status: "pending",
+                    reason: reason,
+                    timeRemaining: timeRemaining
                 });
+
                 console.log("Permission Request Submitted:", response.data);
                 event.target.reset();
                 await loadPermissions();
@@ -289,14 +287,12 @@
                 }
             }
         }
-
         // Populate the application options in the form
         function populateApplicationOptions(applications) {
             const applicationSelect = document.getElementById("application");
             applicationSelect.innerHTML = '<option value="">Choose an application</option>';
             applications.forEach(app => {
                 const option = document.createElement("option");
-                option.value = app.id;
                 option.textContent = app.name;
                 applicationSelect.appendChild(option);
             });
@@ -310,17 +306,17 @@
                 await populatePermissionOptions(selectedApp);
             } else {
                 // Clear permission options if no app is selected
-                const permissionSelect = document.getElementById("subPermission");
+                const permissionSelect = document.getElementById("permissionName");
                 permissionSelect.innerHTML = '<option value="">Choose a permission</option>';
             }
         }
 
-
         // Populate the permission options in the form
         async function populatePermissionOptions(request) {
-            const permissionSelect = document.getElementById("subPermission");
+            const permissionSelect = document.getElementById("permissionName");
             permissionSelect.innerHTML = '<option value="">Choose a permission</option>';
             try {
+                console.log(`Fetching permissions for application: ${request}`);
                 const result = await axios.get(`${API_BASE_URL}/application/${request}`);
                 const permissions = result.data.permissions;
                 permissions.forEach(permission => {
