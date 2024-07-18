@@ -7,7 +7,19 @@ from pymongo import MongoClient
 import os
 from bson import ObjectId
 import logging
+from github import Github
 
+# Authentication is defined via github.Auth
+from github import Auth
+
+# using an access token
+auth = Auth.Token("access_token")
+
+# Public Web Github
+g = Github(auth=auth)
+
+# Github Enterprise with custom hostname
+g = Github(auth=auth, base_url="https://{hostname}/api/v3")
 app = FastAPI()
 
 app.add_middleware(
@@ -174,7 +186,7 @@ async def add_permission_level(level_data: dict):
     if result.inserted_id:
         return new_level
     else:
-       database.permission_level.insert_one(level)
+       database.permission_level.insert_one(new_level.dict())
     print("succeed")
     raise HTTPException(status_code=500, detail="Failed to add permission level")
 
@@ -263,11 +275,30 @@ async def get_pending_requests():
     db = get_database()
     all_permissions = list(db.permissions.find())
     pending_requests = []
+    
     for user_permissions in all_permissions:
-        for permission in user_permissions['permissions']:
-            if permission['status'] == 'pending':
-                permission['id'] = str(user_permissions['_id'])
-                pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
+        user_email = user_permissions.get('email')
+        user = db.users.find_one({"email": user_email})
+        if not user:
+            continue  # Skip if user not found
+        
+        user_name = user.get('name', 'Unknown')
+        
+        for permission in user_permissions.get('permissions', []):
+            if permission.get('status') == 'pending':
+                pending_requests.append(Permission(
+                    id=str(user_permissions['_id']),
+                    name=permission.get('name', ''),
+                    subPermission=permission.get('subPermission', ''),
+                    urgency=permission.get('urgency', ''),
+                    status=permission.get('status', ''),
+                    ))
+    
+    print(pending_requests)  # For debugging
+    
+    if not pending_requests:
+        raise HTTPException(status_code=404, detail="No pending requests found")
+    
     return pending_requests
 
 @app.post("/{action}-request/{request_id}")
