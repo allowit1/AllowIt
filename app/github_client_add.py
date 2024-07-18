@@ -6,7 +6,7 @@ def add_collaborator(repo, username, permission):
     github_token = 'Z2hwX1dKZWk3OXZGSHNNSDFRcm94d2pLTUpndmJYVFppdDFtRktTaw=='
     decoded_bytes = base64.b64decode(github_token)
     headers = {
-        'Authorization': f'token {decoded_bytes.decode('utf-8')}',
+        'Authorization': f'token {decoded_bytes.decode("utf-8")}',
         'Accept': 'application/vnd.github.v3+json'
     }
     
@@ -34,9 +34,7 @@ def add_collaborator(repo, username, permission):
 
 # Example usage:
 repo = "allowit1/Example_Repo"
-username = 'benayat1'
+username = 'maor-noy'
 permission = 'read'  # or 'read'
 
 add_collaborator(repo, username, permission)
-
-

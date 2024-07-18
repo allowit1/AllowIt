@@ -1,4 +1,4 @@
-from github_client import add_collaborator
+from app.github_client_add import add_collaborator
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
