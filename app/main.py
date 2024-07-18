@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import os
 from bson import ObjectId
 import sched
+import random
 import time
 from datetime import datetime, timedelta
 
@@ -40,20 +41,20 @@ async def startup_db_client():
     database = mongodb_client["allowit123"]
     print("Connected to MongoDB")
     
-    document = {
-    "email": "inefi@gmail.com",
-    "permissions": [
-        {
-            "name": "Camera",
-            "subPermission": "Camera",
-            "urgency": "High",
-            "status": "pending",
-            "timeRemaining": "1 minute"  # Fixed syntax issue
-        }
-    ]
-}
+#     document = {
+#     "email": "inefi@gmail.com",
+#     "permissions": [
+#         {
+#             "name": "Camera",
+#             "subPermission": "Camera",
+#             "urgency": "High",
+#             "status": "pending",
+#             "timeRemaining": "1 minute"  # Fixed syntax issue
+#         }
+#     ]
+# }
     
-    database.permissions.insert_one( document )
+#     database.permissions.insert_one( document )
 
 
 @app.on_event("shutdown")
@@ -82,6 +83,7 @@ class Application(BaseModel):
     permissions: List[str]
 
 class PermissionRequest(BaseModel):
+    subId: Optional[int] = None
     request: str
     subPermission: Optional[str] = None
     urgency: str
@@ -235,9 +237,10 @@ async def add_permission_request(email: str, permission: PermissionRequest):
         user = db.users.find_one({"email": email})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-
+            
         new_permission = {
             "name": permission.request,
+            "subId":random.randint(1,1000),
             "subPermission": permission.subPermission,
             "urgency": permission.urgency,
             "timeRemaining": permission.timeRemaining,
@@ -270,15 +273,12 @@ async def get_pending_requests():
     for user_permissions in all_permissions:
         for permission in user_permissions['permissions']:
             if permission['status'] == 'pending':
-                permission['id'] = str(user_permissions['_id'])
-                # pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
                 pending_requests.append(permission)
     return pending_requests
 
 scheduler = sched.scheduler(time.time, time.sleep)
 
 
-#TODO: change the reason to be sent into messages table, and fix the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
@@ -329,7 +329,6 @@ async def get_approved_permissions():
     for user_permissions in all_permissions:
         for permission in user_permissions['permissions']:
             if permission['status'] == 'approved':
-                permission['id'] = str(user_permissions['_id'])
                 approved_permissions.append(permission)
     return approved_permissions
 
