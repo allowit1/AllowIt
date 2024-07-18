@@ -1,4 +1,0 @@
-Example_Repo:
-  example_group1_write:
-    type: group
-    permissions: write
