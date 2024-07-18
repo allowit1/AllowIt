@@ -28,8 +28,8 @@ def remove_collaborator(repo, username):
         print(response.json())
 
 # Example usage:
-repo = "allowit1/Example_Repo"
-username = "benayat1"
+# repo = "allowit1/Example_Repo"
+# username = "benayat1"
 
-# Remove collaborator
-remove_collaborator(repo, username)
+# # Remove collaborator
+# remove_collaborator(repo, username)

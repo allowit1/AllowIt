@@ -33,8 +33,8 @@ def add_collaborator(repo, username, permission):
         print(response.json())
 
 # Example usage:
-repo = "allowit1/Example_Repo"
-username = 'maor-noy'
-permission = 'read'  # or 'read'
+# repo = "allowit1/Example_Repo"
+# username = 'maor-noy'
+# permission = 'read'  # or 'read'
 
-add_collaborator(repo, username, permission)
+# add_collaborator(repo, username, permission)
