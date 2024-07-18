@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException
+from app.github_client_add import add_collaborator
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pymongo import MongoClient
@@ -9,6 +10,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from typing import List, Tuple
 from bson import ObjectId
+from github_client_add import *
+from github_client_remove import *
+from dropbox_client_add import *
+from dropbox_client_remove import *
+
 import atexit
 
 app = FastAPI()
@@ -26,6 +32,7 @@ app.add_middleware(
 )
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
+repo = "allowit1/Example_Repo"
 
 # Global database connection
 mongodb_client = None
@@ -260,19 +267,26 @@ async def get_pending_requests():
     
     return result
 
+
+def handle_approve_request(permission_request, permission):
+    if permission.get("name", "").lower() == "github":
+        add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
+
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
+class RequestBody(BaseModel):
+    reason: Optional[str] = None
+    timeRemaining: Optional[int] = None
+
 @app.post("/{action}-pending-request/{request_id}")
-async def handle_request(action: str, request_id: str, reason: Optional[str] = None, expiryTime: Optional[int] = None):
+async def handle_request(action: str, request_id: str, request_body: RequestBody):
     try:
         db = get_database()
         if action not in ["approve", "deny"]:
             raise HTTPException(status_code=400, detail="Invalid action")
         
-        
-        
         user_permission = db.permissions.find_one({"_id": ObjectId(request_id)})
-
+        print(user_permission)
         if not user_permission:
             raise HTTPException(status_code=404, detail="Request not found")
         
@@ -343,6 +357,9 @@ async def revoke_permission(permission_id: str):
             {"_id": ObjectId(permission_id)},
             {"$set": {"status": "revoked"}}
         )
+
+        gitName = db.users.find_one({"email": user_permissions['email']})['gitHub']
+        remove_collaborator(repo, gitName)
         
         return {"status": "success"}
 
