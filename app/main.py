@@ -50,7 +50,7 @@ class Messages(BaseModel):
 class Permission(BaseModel):
     id:str
     name: str
-    subPermission: str
+    subPermission: Optional[str] = None
     urgency: str
     status: str
     timeRemaining: Optional[str] = None
