@@ -1,4 +1,5 @@
 from app.github_client_add import add_collaborator
+from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
@@ -33,6 +34,7 @@ app.add_middleware(
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
 repo = "allowit1/Example_Repo"
+folder_id = '3362330899'
 
 # Global database connection
 mongodb_client = None
@@ -268,9 +270,9 @@ async def get_pending_requests():
     return result
 
 
-def handle_approve_request(permission_request, permission):
-    if permission.get("name", "").lower() == "github":
-        add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
+# def handle_approve_request(permission_request, permission):
+#     if permission.get("name", "").lower() == "github":
+#         add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
 
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
@@ -311,6 +313,12 @@ async def handle_request(action: str, request_id: str, request_body: RequestBody
             {"_id": ObjectId(request_id)},
             {"$set": user_permission}
         )
+
+        if action == "approve":
+            if user_permission['appName'] == "GitHub":
+                add_collaborator(repo, db.users.find_one({"email": user_permission['email']})['gitHub'], user_permission['permissionName'])
+            elif user_permission['appName'] == "Dropbox":
+                add_folder_member(folder_id, user_permission['email'], user_permission['permissionName'])
 
         return {"status": "success"}
 
@@ -358,9 +366,11 @@ async def revoke_permission(permission_id: str):
             {"$set": {"status": "revoked"}}
         )
 
-        gitName = db.users.find_one({"email": user_permissions['email']})['gitHub']
-        remove_collaborator(repo, gitName)
-        
+        if user_permissions['appName'] == "GitHub":
+            remove_collaborator(repo, db.users.find_one({"email": user_permissions['email']})['gitHub'])
+        elif user_permissions['appName'] == "Dropbox":
+            remove_folder_member(folder_id, user_permissions['email'])
+
         return {"status": "success"}
 
     except Exception as e:
