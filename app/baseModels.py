@@ -6,15 +6,6 @@ class Messages(BaseModel):
     email: str
     messages: List[str]
 
-# Model for permissions 
-class Permission(BaseModel):
-    id:str
-    name: str
-    subPermission: Optional[str]
-    urgency: str
-    status: str
-    timeRemaining: Optional[str] = None
-
 # Model for applications
 class Application(BaseModel):
     id: Optional[str]
@@ -23,13 +14,6 @@ class Application(BaseModel):
     href: str
     permissions: List[str]
 
-# Model for permission requests
-class PermissionRequest(BaseModel):
-    appName: str
-    permissionName: Optional[str] = None
-    urgency: str
-    timeRemaining: Optional[str] = None
-
 # Model for user
 class User(BaseModel):
     name: str
@@ -37,6 +21,26 @@ class User(BaseModel):
     gitHub: str
     permissionLevel: str
     isAdmin: bool
+
+# # Model for permission requests
+# class PermissionRequest(BaseModel):
+#     user: User
+#     appName: str
+#     permissionName: Optional[str] = None
+#     urgency: str
+#     timeRemaining: Optional[str] = None
+#     reason: Optional[str] = None
+
+# Model for permissions 
+class Permission(BaseModel):
+    id:str
+    user: User
+    appName: str
+    permissionName: Optional[str]
+    urgency: str
+    status: str
+    reason: Optional[str] = None
+    timeRemaining: Optional[str] = None
 
 # Model for appPermissions
 class AppPermission(BaseModel):
