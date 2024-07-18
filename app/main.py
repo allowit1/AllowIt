@@ -229,12 +229,6 @@ async def add_permission_request(email: str, permission: Permission):
 # Get all pending requests
 
 
-
-
-class PendingRequestWithName(BaseModel):
-    permission: Permission
-    userName: str
-
 @app.get("/pending-requests", response_model=List[PendingRequestWithName])
 async def get_pending_requests():
     db = get_database()
@@ -255,31 +249,31 @@ async def get_pending_requests():
         )
         result.append(PendingRequestWithName(
             permission=permission,
-            userName=user["name"] if user else "Unknown"
+            userName=user["name"] if user else "Unknown",
+            id = str(request["_id"])
         ))
     
     return result
 
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
-@app.post("/{action}-request/{request_id}")
-async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
+@app.post("/{action}-pending-request/{request_id}")
+async def handle_request(action: str, request_id: str, reason: Optional[str] = None, expiryTime: Optional[int] = None):
     try:
         db = get_database()
-
-        if action not in ["approve", "deny"]: # if action is not approve or deny raise an error
+        if action not in ["approve", "deny"]:
             raise HTTPException(status_code=400, detail="Invalid action")
         
-        user_permission = db.permissions.find_one({"_id": ObjectId(request_id)}) # find the request by id
-        if not user_permission: # if request not found raise an error
-            raise HTTPException(status_code=404, detail="Error in finding request")
         
-
+        
+        user_permission = db.permissions.find_one({"_id": ObjectId(request_id)})
+        print(user_permission)
+        if not user_permission:
+            raise HTTPException(status_code=404, detail="Request not found")
+        
         user_permission['status'] = 'approved' if action == 'approve' else 'denied'
-        if expiryTime:
+        if expiryTime is not None:
             user_permission['timeRemaining'] = f"{expiryTime} hours"
-            # background_tasks.add_task()
-
         
         if reason:
             db.messages.update_one(
@@ -292,10 +286,10 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
             {"$set": user_permission}
         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to update request")
+        return {"status": "success"}
 
-# def revokeOntime()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update request: {str(e)}")
 
 # Get all approved permissions
 @app.get("/approved-permissions", response_model=List[Permission])
