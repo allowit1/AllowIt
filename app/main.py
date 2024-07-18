@@ -257,30 +257,38 @@ async def get_pending_requests():
 
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
+class RequestBody(BaseModel):
+    reason: Optional[str] = None
+    timeRemaining: Optional[int] = None
+
 @app.post("/{action}-pending-request/{request_id}")
-async def handle_request(action: str, request_id: str, reason: Optional[str] = None, expiryTime: Optional[int] = None):
+async def handle_request(action: str, request_id: str, request_body: RequestBody):
     try:
         db = get_database()
         if action not in ["approve", "deny"]:
             raise HTTPException(status_code=400, detail="Invalid action")
         
-        
-        
         user_permission = db.permissions.find_one({"_id": ObjectId(request_id)})
-        print(user_permission)
         if not user_permission:
             raise HTTPException(status_code=404, detail="Request not found")
         
         user_permission['status'] = 'approved' if action == 'approve' else 'denied'
-        if expiryTime is not None:
-            user_permission['timeRemaining'] = f"{expiryTime} hours"
+        if request_body.timeRemaining is not None:
+            user_permission['timeRemaining'] = request_body.timeRemaining
         
-        if reason:
-            db.messages.update_one(
-                {"email": user_permission['email']},
-                {"$push": {"messages": reason}}
-            )
-        
+        if request_body.reason:
+
+            new_message =  "your application was" +  action + " because " + request_body.reason
+            
+
+            if db.messages.find_one({"email": user_permission['email']}) is None:
+                db.messages.insert_one({"email": user_permission['email'], "messages": [request_body.reason]})
+            else:
+                db.messages.update_one(
+                    {"email": user_permission['email']},
+                    {"$push": {"messages": new_message}}
+                )
+            
         result = db.permissions.update_one(
             {"_id": ObjectId(request_id)},
             {"$set": user_permission}
@@ -290,6 +298,7 @@ async def handle_request(action: str, request_id: str, reason: Optional[str] = N
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update request: {str(e)}")
+
 
 # Get all approved permissions
 @app.get("/approved-permissions", response_model=List[Permission])
