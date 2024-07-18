@@ -6,6 +6,9 @@ import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
+import sched
+import time
+from datetime import datetime, timedelta
 
 app = FastAPI()
 
@@ -36,6 +39,22 @@ async def startup_db_client():
     mongodb_client = MongoClient(MONGO_URL)
     database = mongodb_client["allowit123"]
     print("Connected to MongoDB")
+    
+    document = {
+    "email": "inefi@gmail.com",
+    "permissions": [
+        {
+            "name": "Camera",
+            "subPermission": "Camera",
+            "urgency": "High",
+            "status": "pending",
+            "timeRemaining": "1 minute"  # Fixed syntax issue
+        }
+    ]
+}
+    
+    database.permissions.insert_one( document )
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -84,7 +103,6 @@ class PermissionLevel(BaseModel):
     name: str
     Permissions: List[AppPermission]
 
-    
 
 @app.get("/user-details/{email}", response_model=User)
 async def get_user_details(email: str):
@@ -103,13 +121,6 @@ async def get_users():
         user['id'] = str(user['_id'])
     return users
 
-# @app.post("/users", response_model=User)
-# async def add_user(user: User):
-#     db = get_database()
-#     user_dict = user.dict(exclude={'id'})
-#     result = db.users.insert_one(user_dict)
-#     user_dict['id'] = str(result.inserted_id)
-#     return user_dict
 
 @app.put("/users/{user_id}", response_model=User)
 async def update_user(user_id: str, user: User):
@@ -125,6 +136,7 @@ async def update_user(user_id: str, user: User):
             return updated_user
     raise HTTPException(status_code=404, detail="User not found")
 
+
 @app.delete("/users/{user_id}")
 async def delete_user(user_id: str):
     db = get_database()
@@ -133,15 +145,12 @@ async def delete_user(user_id: str):
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="User not found")
 
-
   
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
     db = get_database()
     levels = list(db.permission_levels.find())
     return [PermissionLevel(id=str(level['_id']), name=level['name'], Permissions=level['Permissions']) for level in levels]
-
-
 
 
 @app.post("/permission-levels", response_model=PermissionLevel)
@@ -226,8 +235,6 @@ async def add_permission_request(email: str, permission: PermissionRequest):
         user = db.users.find_one({"email": email})
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
-        
-        permission.subPermission = "hooooooo"
 
         new_permission = {
             "name": permission.request,
@@ -268,7 +275,10 @@ async def get_pending_requests():
                 pending_requests.append(permission)
     return pending_requests
 
-#TODO: change the reson to be sent into messages table, and fux the code
+scheduler = sched.scheduler(time.time, time.sleep)
+
+
+#TODO: change the reason to be sent into messages table, and fix the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
@@ -289,6 +299,9 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
             if expiryTime:
                 permission['timeRemaining'] = f"{expiryTime} hours"
     
+    revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
+    scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
+    ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
         {"$set": {"permissions": user_permissions['permissions']}}
@@ -347,6 +360,15 @@ async def get_applications():
     for app in applications:
         app['id'] = str(app['_id'])
     return applications
+
+@app.get("/application/{name}", response_model=Application)
+async def get_application(name: str):
+    db = get_database()
+    app = db.applications.find_one({"name": name})
+    if app:
+        app['id'] = str(app['_id'])
+        return app
+    raise HTTPException(status_code=404, detail="Application not found")
 
 @app.get("/messages/{email}", response_model=List[str])
 async def get_messages(email: str):
