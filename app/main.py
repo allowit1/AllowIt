@@ -298,6 +298,7 @@ async def get_application(name: str):
     
 @app.get("/messages/{email}", response_model=List[str])
 async def get_messages(email: str):
+    print(email)
     db = get_database()
     mes = db.messages.find_one({"email": email})
     if mes is None:

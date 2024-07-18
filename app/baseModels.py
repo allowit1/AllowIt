@@ -26,7 +26,7 @@ class Application(BaseModel):
 # Model for permission requests
 class PermissionRequest(BaseModel):
     request: str
-    subPermission: Optional[str] = None
+    subPermission: str
     urgency: str
     timeRemaining: Optional[str] = None
 

@@ -258,7 +258,7 @@
             const request = applicationSelect.options[applicationSelect.selectedIndex].text;
 
             const permissionSelect = document.getElementById("subPermission");
-            const permission = permissionSelect.options[permissionSelect.selectedIndex].text;
+            const subPermission = permissionSelect.options[permissionSelect.selectedIndex].text;
             const urgency = document.querySelector('input[name="urgency"]:checked').value;
             const time = document.getElementById("time").value;
             const days = document.getElementById("days").value;
@@ -270,12 +270,12 @@
             } else if (days) {
                 timeRemaining = `${days} days`;
             }
-
+            console.log(subPermission)
             try {
                 // Send the request to the server
                 const response = await axios.post(`${API_BASE_URL}/permission-request/${userEmail}`, {
                     request,
-                    permission,
+                    subPermission,
                     urgency,
                     timeRemaining
                 });
