@@ -1,3 +1,4 @@
+from github_client import add_collaborator
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
@@ -279,6 +280,10 @@ async def get_pending_requests():
 scheduler = sched.scheduler(time.time, time.sleep)
 
 
+def handle_approve_request(permission_request, permission):
+    if permission.get("name", "").lower() == "github":
+        add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
+
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
@@ -293,6 +298,8 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
     for permission in user_permissions['permissions']: # loop through all permissions and update the status
         if permission['status'] == 'pending':
             if action == "approve":
+                # aprroved here
+                handle_approve_request(user_permissions, permission)
                 permission['status'] = 'approved'
             elif action == "deny":
                 permission['status'] = 'denied'
@@ -341,6 +348,7 @@ async def revoke_permission(permission_id: str):
     
     for permission in user_permissions['permissions']:
         if permission['status'] == 'approved':
+            # handel revoke here
             permission['status'] = 'revoked'
     
     result = db.permissions.update_one(
