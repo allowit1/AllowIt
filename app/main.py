@@ -69,7 +69,7 @@ class Messages(BaseModel):
 class Permission(BaseModel):
     id:str
     name: str
-    subPermission: str
+    subPermission: Optional[str] = None
     urgency: str
     status: str
     timeRemaining: Optional[str] = None
@@ -278,7 +278,7 @@ async def get_pending_requests():
 scheduler = sched.scheduler(time.time, time.sleep)
 
 
-#TODO: change the reson to be sent into messages table, and fix the code
+#TODO: change the reason to be sent into messages table, and fix the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
