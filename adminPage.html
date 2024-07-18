@@ -266,22 +266,26 @@
                 requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
-                    const urgencyClass = request.urgency.toLowerCase();
+                    const urgencyClass = request.permission.urgency && typeof request.permission.urgency.toLowerCase === 'function' 
+                        ? request.permission.urgency.toLowerCase() 
+                        : 'unknown';
                     li.innerHTML = `
-                        <div class="request-info">
+                        <div class="request-info urgency ${urgencyClass}">
                             <span>${request.permission.appName} - ${request.permission.permissionName}</span>
-                            <span>${request.name}</span>
+                            <span>${request.userName}</span>
                         </div>
                     `;
                     
+                    // Use the correct ID from the request object
                     li.onclick = () => openHandleRequestModal(request.id);
                     requestsList.appendChild(li);
                 });
             } catch (error) {
                 console.error("Error loading pending requests:", error);
+                document.getElementById("pendingList").innerHTML = 
+                    '<li class="error-message">Error loading pending requests. Please try again later.</li>';
             }
         }
-
         async function loadApprovedPermissions() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
@@ -509,25 +513,47 @@
         ///////////////// Request Functions /////////////////
 
         function openHandleRequestModal(requestId) {
+            console.log("Opening modal for request ID:", requestId);
+            if (!requestId) {
+                console.error("Attempt to open modal with undefined requestId");
+                alert("Error: Invalid request. Please try again.");
+                return;
+            }
             document.getElementById("requestId").value = requestId;
             openModal('handleRequestModal');
         }
-
         async function handleRequest(action) {
             const requestId = document.getElementById("requestId").value;
+            console.log("Handling request for ID:", requestId);
+            if (!requestId) {
+                console.error("Request ID is missing");
+                alert("Error: Request ID is missing. Please try again.");
+                return;
+            }
+
             const reason = document.getElementById("requestReason").value;
             const time = document.getElementById("requestTime").value;
-            console.log("Handling request:", { requestId, action, reason, time });
+            const days = document.getElementById("requestDays").value;
+
+            let timeRemaining = null;
+            if (time || days) {
+                timeRemaining = parseInt(time || 0) + parseInt(days || 0) * 24;
+            }
+
+            console.log("Handling request:", { requestId, action, reason, timeRemaining });
+            const payload = { reason, expiryTime: timeRemaining };
+
             try {
-                await axios.post(`${API_BASE_URL}/${action}-request/${requestId}`, { reason, expiryTime: parseInt(time) });
+                const response = await axios.post(`${API_BASE_URL}/${action}-pending-request/${requestId}`, reason, timeRemaining);
+                console.log("Response:", response.data);
                 closeModal('handleRequestModal');
                 await loadPendingRequests();
                 await loadApprovedPermissions();
             } catch (error) {
-                console.error(`Error ${action}ing request:`, error);
+                console.error(`Error ${action}ing request:`, error.response ? error.response.data : error);
+                alert(`Failed to ${action} request. Please try again.`);
             }
         }
-
         async function revokePermission(permissionId) {
             if (confirm("Are you sure you want to revoke this permission?")) {
                 try {

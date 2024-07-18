@@ -49,3 +49,8 @@ class AppPermission(BaseModel):
 class PermissionLevel(BaseModel):
     levelName: str
     permissions: List[AppPermission]
+
+class PendingRequestWithName(BaseModel):
+    permission: Permission
+    userName: str
+    id: str
