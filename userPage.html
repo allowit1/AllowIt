@@ -265,7 +265,7 @@
             if (hours || days) {
                 timeRemaining = parseInt(days) * 24 + parseInt(hours);
             }
-            console.log(subPermission)
+
             try {
                 const response = await axios.post(`${API_BASE_URL}/permission-request/${userEmail}`, {
                     email: userEmail,

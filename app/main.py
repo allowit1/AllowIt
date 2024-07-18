@@ -1,16 +1,21 @@
-from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
 from baseModels import *
-
+from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from typing import List, Tuple
 from bson import ObjectId
+import atexit
 
 app = FastAPI()
+
+scheduler = BackgroundScheduler()
+scheduler.start()
+atexit.register(lambda: scheduler.shutdown())
 
 app.add_middleware(
     CORSMiddleware,
@@ -267,11 +272,18 @@ async def handle_request(action: str, request_id: str, reason: Optional[str] = N
         
         
         user_permission = db.permissions.find_one({"_id": ObjectId(request_id)})
-        print(user_permission)
+
         if not user_permission:
             raise HTTPException(status_code=404, detail="Request not found")
         
-        user_permission['status'] = 'approved' if action == 'approve' else 'denied'
+        if action == 'approve':
+            # Add permission to user
+            user_permission['status'] = 'approved'
+            if expiryTime is not None:
+                schedule_revoke(expiryTime, request_id)
+        else:
+            # Deny permission
+            user_permission['status'] = 'denied'
         if expiryTime is not None:
             user_permission['timeRemaining'] = f"{expiryTime} hours"
         
@@ -291,21 +303,35 @@ async def handle_request(action: str, request_id: str, reason: Optional[str] = N
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update request: {str(e)}")
 
+def schedule_revoke(hours: int, permission_id: str):
+    revoke_time = datetime.now() + timedelta(seconds=10)
+    scheduler.add_job(
+        revoke_permission,
+        'date',
+        run_date=revoke_time,
+        args=[permission_id],
+        id=permission_id,
+        replace_existing=False
+    )
+
 # Get all approved permissions
-@app.get("/approved-permissions", response_model=List[Permission])
+@app.get("/approved-permissions", response_model=List[dict])
 async def get_approved_permissions():
     db = get_database()
     all_permissions = list(db.permissions.find())
     approved_permissions = []
-    for permission in all_permissions:
+    for permission in all_permissions:  
         if permission['status'] == 'approved':
+            permission['id'] = str(permission['_id'])
+            del permission['_id']
             approved_permissions.append(permission)
-
+    print(approved_permissions)
     return approved_permissions
 
 # Revoke permission
 @app.post("/revoke-permission/{permission_id}")
 async def revoke_permission(permission_id: str):
+    print("revoking permission")
     try:
         db = get_database()
         user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
@@ -313,18 +339,15 @@ async def revoke_permission(permission_id: str):
         if not user_permissions:
             raise HTTPException(status_code=404, detail="Permission not found")
         
-
-        user_permissions['status'] = 'revoked'
-        
         result = db.permissions.update_one(
             {"_id": ObjectId(permission_id)},
-            {"$set": {"permissions": user_permissions['permissions']}}
+            {"$set": {"status": "revoked"}}
         )
         
         return {"status": "success"}
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to revoke permission")
+        raise HTTPException(status_code=400, detail="Failed to revoke permission")
 
 #endregion
 
