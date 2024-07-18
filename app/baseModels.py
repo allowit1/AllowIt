@@ -47,5 +47,5 @@ class AppPermission(BaseModel):
 
 # Model for permission levels
 class PermissionLevel(BaseModel):
-    appName: str
-    Permissions: List[AppPermission]
+    levelName: str
+    permissions: List[AppPermission]

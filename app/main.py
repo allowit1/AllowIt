@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pymongo import MongoClient
@@ -58,9 +58,7 @@ async def get_user_details(email: str):
 @app.get("/users", response_model=List[User])
 async def get_users():
     db = get_database()
-    users = list(db.users.find())
-    for user in users:
-        user['id'] = str(user['_id'])
+    users = list(db.users.find({"isAdmin": False}))
     return users
 
 # Update user details
@@ -125,44 +123,33 @@ async def add_user(user_data: dict):
 
 #region permissions-levels  
 
+
 # Get all permission levels
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
     db = get_database()
     levels = list(db.permission_levels.find())
-    return [PermissionLevel(id=str(level['_id']), appName=level['appName'], Permissions=level['Permissions']) for level in levels]
-
+    return [
+        PermissionLevel(
+            levelName=level['levelName'],
+            permissions=level['permissions']
+        ) for level in levels
+    ]
 
 # add permission level
-@app.post("/permission-levels", response_model=PermissionLevel)
-async def add_permission_level(level_data: dict):
-    print("Received data:", level_data)
+@app.get("/permission-levels", response_model=List[PermissionLevel])
+async def get_permission_levels():
     db = get_database()
-    
-    appName = level_data['appName']
-    permissions = level_data['permissions']
-
-    existing_level = db.permission_levels.find_one({"appName": appName})
-    if existing_level:
-        raise HTTPException(status_code=400, detail="Permission level already exists")
-
-    app_permissions = []
-    for app_id, perms in permissions.items():
-        app = db.applications.find_one({"_id": ObjectId(app_id)})
-        if app:
-            app_permissions.append(AppPermission(
-                appName=app['appName'],
-                permissions=perms
-            ))
-
-    new_level = PermissionLevel(
-        appName=appName,
-        Permissions=app_permissions
-    )
-
-    db.permission_levels.insert_one(new_level.dict())
-
-    return new_level
+    levels = list(db.permission_levels.find())
+    return [
+        PermissionLevel(
+            levelName=level['levelName'],
+            permissions=[
+                AppPermission(appName=app['name'], permissions=app['permissions'])
+                for app in level['permissions']
+            ]
+        ) for level in levels
+    ]
 
 # Update permission level
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
@@ -237,17 +224,36 @@ async def add_permission_request(email: str, permission: Permission):
         raise HTTPException(status_code=500, detail=str(e))
         
 # Get all pending requests
-@app.get("/pending-requests", response_model=List[Permission])
+
+
+
+
+class PendingRequestWithName(BaseModel):
+    permission: Permission
+    userName: str
+
+@app.get("/pending-requests", response_model=PendingRequestWithName)
 async def get_pending_requests():
     db = get_database()
-    all_permissions = list(db.permissions.find())
-    pending_requests = []
-    #TODO:add sql to filter
-    for permission in all_permissions:
-        if permission['status'] == 'pending':
-            pending_requests.append(permission)
-
-    return pending_requests
+    pending_requests = list(db.permissions.find({"status": "pending"}))
+    
+    result = []
+    for request in pending_requests:
+        user = db.users.find_one({"email": request["email"]})
+        result = Permission(
+            email=request["email"],
+            appName=request["appName"],
+            permissionName=request["permissionName"],
+            urgency=request["urgency"],
+            status=request["status"],
+            reason=request["reason"],
+            timeRemaining=request["timeRemaining"]
+        )
+    result = PendingRequestWithName(permission=result, userName=user["name"])
+        
+        
+    
+    return result
 
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
@@ -267,7 +273,8 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
         user_permission['status'] = 'approved' if action == 'approve' else 'denied'
         if expiryTime:
             user_permission['timeRemaining'] = f"{expiryTime} hours"
-            #TODO: add expiry time to the request
+            # background_tasks.add_task()
+
         
         if reason:
             db.messages.update_one(
@@ -283,6 +290,7 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to update request")
 
+# def revokeOntime()
 
 # Get all approved permissions
 @app.get("/approved-permissions", response_model=List[Permission])
@@ -356,10 +364,10 @@ async def get_messages(email: str):
 #region permissions
 
 from fastapi import FastAPI, HTTPException
-from typing import List
+from typing import List, Tuple
 from bson import ObjectId
 
-@app.get("/permissions/{email}", response_model=List[Permission])
+@app.get("/ /{email}", response_model=List[Permission])
 async def get_permissions(email: str):
     db = get_database()
     permissions = list(db.permissions.find({"email": email}))
