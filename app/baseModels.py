@@ -8,7 +8,6 @@ class Messages(BaseModel):
 
 # Model for applications
 class Application(BaseModel):
-    id: Optional[str]
     name: str
     icon: str
     href: str
@@ -33,14 +32,13 @@ class User(BaseModel):
 
 # Model for permissions 
 class Permission(BaseModel):
-    id:str
-    user: User
+    email:str
     appName: str
-    permissionName: Optional[str]
+    permissionName: Optional[str]#TODO: remove optional
     urgency: str
     status: str
     reason: Optional[str] = None
-    timeRemaining: Optional[str] = None
+    timeRemaining: Optional[int] = None 
 
 # Model for appPermissions
 class AppPermission(BaseModel):
