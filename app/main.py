@@ -1,4 +1,3 @@
-from app.github_client_add import add_collaborator
 from fastapi import FastAPI, HTTPException
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -262,11 +261,6 @@ async def get_pending_requests():
         ))
     
     return result
-
-
-def handle_approve_request(permission_request, permission):
-    if permission.get("name", "").lower() == "github":
-        add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
 
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
