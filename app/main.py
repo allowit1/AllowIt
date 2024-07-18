@@ -299,8 +299,8 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
             if expiryTime:
                 permission['timeRemaining'] = f"{expiryTime} hours"
     
-    revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
-    scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
+    # revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
+    # scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
     ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
