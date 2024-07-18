@@ -10,7 +10,7 @@ class Program
 {
     static void AddPartner(string baseDirectory, string group, string partner, string accessType)
     {
-        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomation.yml");
+        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomationInAllowIt.yml");
         string repoFilePath = Path.Combine(baseDirectory, "repos", "Example_Repo.yml");
         
         var groupData = ReadYaml(groupFilePath);
@@ -83,7 +83,7 @@ class Program
 
     static void RemovePartner(string baseDirectory, string group, string partner, string accessType)
     {
-        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomation.yml");
+        string groupFilePath = Path.Combine(baseDirectory, "groups", "TestOfAutomationInAllowIt.yml");
         string repoFilePath = Path.Combine(baseDirectory, "repos", "Example_Repo.yml");
         
         var groupData = ReadYaml(groupFilePath);
@@ -215,9 +215,25 @@ class Program
         }
     }
 
+       static void PullFromGitHub(string baseDirectory)
+    {
+        try
+        {
+            RunGitCommand(baseDirectory, "pull");
+            Console.WriteLine("Changes pulled from GitHub successfully.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while pulling from GitHub: {ex.Message}");
+        }
+    }
+
     static void Main(string[] args)
     {
-        string baseDirectory = @"C:\Users\User\Documents\Automation_Test\AllowIt";
+        string baseDirectory = @"C:\Users\User\Documents\AllowIt";
+
+         // Pull changes from GitHub
+        PullFromGitHub(baseDirectory);
 
         // AddPartner(baseDirectory, "example_group1", "benayat1", "write");
         // RemovePartner(baseDirectory, "example_group1", "maor-noy", "write");
@@ -229,8 +245,10 @@ class Program
         //AddPartner(baseDirectory, "example_group1", "yeretyn@gmail.com", "write");
         //AddPartner(baseDirectory, "example_group1", "manoy@g.jct.ac.il", "write");
         //AddPartner(baseDirectory, "example_group1", "YairLevi03", "write");
+        AddPartner(baseDirectory, "example_group1", "YakirMauda", "write");
         RemovePartner(baseDirectory, "example_group1", "benayat1", "write");
 
+        // Push changes to GitHub
         PushToGitHub(baseDirectory, "Your commit message here");
     }
 }

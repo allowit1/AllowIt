@@ -88,9 +88,8 @@
 
     <script>
         // the server url
-    //    const API_BASE_URL= "http://54.144.90.189:5001";
+        // const API_BASE_URL= "http://55.144.90.189:5001";
         const API_BASE_URL= "http://localhost:5001";
-
         // Get the user email from localStorage
         const userEmail = localStorage.getItem("userEmail");
 
@@ -227,7 +226,7 @@
             }
         }
 
-        // Load applications from the server
+        // Load applications  from the server
         async function loadApplications() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/applications`);

@@ -6,20 +6,7 @@ import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
-import logging
-from github import Github
 
-# Authentication is defined via github.Auth
-from github import Auth
-
-# using an access token
-auth = Auth.Token("access_token")
-
-# Public Web Github
-g = Github(auth=auth)
-
-# Github Enterprise with custom hostname
-g = Github(auth=auth, base_url="https://{hostname}/api/v3")
 app = FastAPI()
 
 app.add_middleware(
@@ -61,6 +48,7 @@ class Messages(BaseModel):
     messages: List[str]
 
 class Permission(BaseModel):
+    id:str
     name: str
     subPermission: str
     urgency: str
@@ -81,11 +69,11 @@ class PermissionRequest(BaseModel):
     timeRemaining: Optional[str] = None
 
 class User(BaseModel):
-    name: Optional[str]
-    email: Optional[str]
-    phone: Optional[str]
-    permissionLevel: Optional[str]
-    isAdmin: Optional[bool] = False
+    name: str
+    email: str
+    phone: str
+    permissionLevel: str
+    isAdmin: bool
 
 
 class AppPermission(BaseModel):
@@ -186,7 +174,7 @@ async def add_permission_level(level_data: dict):
     if result.inserted_id:
         return new_level
     else:
-       database.permission_level.insert_one(new_level.dict())
+       database.permission_level.insert_one(level)
     print("succeed")
     raise HTTPException(status_code=500, detail="Failed to add permission level")
 
@@ -264,8 +252,7 @@ async def add_permission_request(email: str, permission: PermissionRequest):
                 "permissions": [new_permission]
             })
 
-
-            return {"status": "success", "message": "Permission request added successfully"}
+        return {"status": "success", "message": "Permission request added successfully"}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to add permission request")
@@ -275,43 +262,28 @@ async def get_pending_requests():
     db = get_database()
     all_permissions = list(db.permissions.find())
     pending_requests = []
-    
     for user_permissions in all_permissions:
-        user_email = user_permissions.get('email')
-        user = db.users.find_one({"email": user_email})
-        if not user:
-            continue  # Skip if user not found
-        
-        user_name = user.get('name', 'Unknown')
-        
-        for permission in user_permissions.get('permissions', []):
-            if permission.get('status') == 'pending':
-                pending_requests.append(Permission(
-                    id=str(user_permissions['_id']),
-                    name=permission.get('name', ''),
-                    subPermission=permission.get('subPermission', ''),
-                    urgency=permission.get('urgency', ''),
-                    status=permission.get('status', ''),
-                    ))
-    
-    print(pending_requests)  # For debugging
-    
-    if not pending_requests:
-        raise HTTPException(status_code=404, detail="No pending requests found")
-    
+        for permission in user_permissions['permissions']:
+            if permission['status'] == 'pending':
+                permission['id'] = str(user_permissions['_id'])
+                # pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
+                pending_requests.append(permission)
+                print(permission)
     return pending_requests
 
+#TODO: change the reson to be sent into messages table, and fux the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
-    if action not in ["approve", "deny"]:
+
+    if action not in ["approve", "deny"]: # if action is not approve or deny raise an error
         raise HTTPException(status_code=400, detail="Invalid action")
     
-    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)})
-    if not user_permissions:
+    user_permissions = db.permissions.find_one({"_id": ObjectId(request_id)}) # find the request by id
+    if not user_permissions: # if request not found raise an error
         raise HTTPException(status_code=404, detail="Request not found")
     
-    for permission in user_permissions['permissions']:
+    for permission in user_permissions['permissions']: # loop through all permissions and update the status
         if permission['status'] == 'pending':
             permission['status'] = 'approved' if action == 'approve' else 'denied'
             permission['reason'] = reason
@@ -329,6 +301,9 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
 
 @app.get("/approved-permissions", response_model=List[Permission])
 async def get_approved_permissions():
+    '''
+    Get all approved permissions
+    '''
     db = get_database()
     all_permissions = list(db.permissions.find())
     approved_permissions = []
@@ -343,6 +318,7 @@ async def get_approved_permissions():
 async def revoke_permission(permission_id: str):
     db = get_database()
     user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
+    print(user_permissions)
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Permission not found")
     
@@ -379,15 +355,22 @@ async def get_messages(email: str):
 async def get_permissions(email: str):
     db = get_database()
     perm = db.permissions.find_one({"email": email})
+    print(perm)
     if perm is None or "permissions" not in perm:
         raise HTTPException(status_code=404, detail="Permissions not found")
-    return perm["permissions"]
-
-
+    all_permissions = []
+    for permission in perm['permissions']:
+        permission['id'] = str(permission['_id']) if '_id' in permission else str(perm['_id'])
+        if 'reason' in permission:
+            del permission['reason']
+        all_permissions.append(permission)
+    print(all_permissions)
+    return all_permissions
+    
 
 @app.post ("/users" , response_model=User)
 async def add_user(user_data: dict):
-
+    
     db = get_database()
     name = user_data['name']
     email = user_data['email']
@@ -400,7 +383,7 @@ async def add_user(user_data: dict):
         name=name,
         email=email,
         phone=phone,
-        permissionLevel=permissionLevel.name,
+        permissionLevel=permissionLevel,
         isAdmin=False
     )
     result = db.users.insert_one(new_user.dict())
@@ -408,6 +391,6 @@ async def add_user(user_data: dict):
         return new_user
     else:
         raise HTTPException(status_code=500, detail="Failed to add user")
-    
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
