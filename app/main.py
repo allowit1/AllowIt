@@ -6,6 +6,9 @@ import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
+import sched
+import time
+from datetime import datetime, timedelta
 
 app = FastAPI()
 
@@ -36,6 +39,22 @@ async def startup_db_client():
     mongodb_client = MongoClient(MONGO_URL)
     database = mongodb_client["allowit123"]
     print("Connected to MongoDB")
+    
+    document = {
+    "email": "inefi@gmail.com",
+    "permissions": [
+        {
+            "name": "Camera",
+            "subPermission": "Camera",
+            "urgency": "High",
+            "status": "pending",
+            "timeRemaining": "1 minute"  # Fixed syntax issue
+        }
+    ]
+}
+    
+    database.permissions.insert_one( document )
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -271,7 +290,10 @@ async def get_pending_requests():
                 print(permission)
     return pending_requests
 
-#TODO: change the reson to be sent into messages table, and fux the code
+scheduler = sched.scheduler(time.time, time.sleep)
+
+
+#TODO: change the reson to be sent into messages table, and fix the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
@@ -290,6 +312,9 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
             if expiryTime:
                 permission['timeRemaining'] = f"{expiryTime} hours"
     
+    revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
+    scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
+    ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
         {"$set": {"permissions": user_permissions['permissions']}}
