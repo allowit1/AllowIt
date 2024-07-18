@@ -6,6 +6,10 @@ import os
 from bson import ObjectId
 from baseModels import *
 
+from fastapi import FastAPI, HTTPException
+from typing import List, Tuple
+from bson import ObjectId
+
 app = FastAPI()
 
 app.add_middleware(
@@ -123,34 +127,34 @@ async def add_user(user_data: dict):
 
 #region permissions-levels  
 
-
-# Get all permission levels
-@app.get("/permission-levels", response_model=List[PermissionLevel])
-async def get_permission_levels():
-    db = get_database()
-    levels = list(db.permission_levels.find())
-    return [
-        PermissionLevel(
-            levelName=level['levelName'],
-            permissions=level['permissions']
-        ) for level in levels
-    ]
-
 # add permission level
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
     db = get_database()
     levels = list(db.permission_levels.find())
-    return [
-        PermissionLevel(
-            levelName=level['levelName'],
-            permissions=[
-                AppPermission(appName=app['name'], permissions=app['permissions'])
-                for app in level['permissions']
-            ]
-        ) for level in levels
-    ]
+    result = []
+    for level in levels:
+        try:
+            # Try to get 'levelName', fallback to 'name' if not present
+            level_name = level.get('levelName')
 
+            permissions = level.get('permissions', [])
+            app_permissions = []
+            for app in permissions:
+                app_name = app.get('name') or app.get('appName')
+                app_permissions.append(AppPermission(
+                    appName=app_name,
+                    permissions=app.get('permissions', [])
+                ))
+
+            result.append(PermissionLevel(
+                levelName=level_name,
+                permissions=app_permissions
+            ))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    return result
 # Update permission level
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
 async def update_permission_level(level_id: str, level_data: dict):
@@ -207,7 +211,7 @@ async def add_permission_request(email: str, permission: Permission):
         db = get_database()
         user = db.users.find_one({"email": email})
         if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail=f"User with email {email} not found")
 
         new_permission = permission.dict()
         new_permission["email"] = email
@@ -221,8 +225,7 @@ async def add_permission_request(email: str, permission: Permission):
             raise HTTPException(status_code=500, detail="Failed to add permission request")
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-        
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
 # Get all pending requests
 
 
@@ -232,7 +235,7 @@ class PendingRequestWithName(BaseModel):
     permission: Permission
     userName: str
 
-@app.get("/pending-requests", response_model=PendingRequestWithName)
+@app.get("/pending-requests", response_model=List[PendingRequestWithName])
 async def get_pending_requests():
     db = get_database()
     pending_requests = list(db.permissions.find({"status": "pending"}))
@@ -240,18 +243,20 @@ async def get_pending_requests():
     result = []
     for request in pending_requests:
         user = db.users.find_one({"email": request["email"]})
-        result = Permission(
+        permission = Permission(
+            id=str(request["_id"]),
             email=request["email"],
             appName=request["appName"],
             permissionName=request["permissionName"],
             urgency=request["urgency"],
             status=request["status"],
-            reason=request["reason"],
-            timeRemaining=request["timeRemaining"]
+            reason=request.get("reason"),
+            timeRemaining=request.get("timeRemaining")
         )
-    result = PendingRequestWithName(permission=result, userName=user["name"])
-        
-        
+        result.append(PendingRequestWithName(
+            permission=permission,
+            userName=user["name"] if user else "Unknown"
+        ))
     
     return result
 
@@ -363,11 +368,8 @@ async def get_messages(email: str):
 
 #region permissions
 
-from fastapi import FastAPI, HTTPException
-from typing import List, Tuple
-from bson import ObjectId
 
-@app.get("/ /{email}", response_model=List[Permission])
+@app.get("/permissions/{email}", response_model=List[Permission])
 async def get_permissions(email: str):
     db = get_database()
     permissions = list(db.permissions.find({"email": email}))

@@ -266,19 +266,24 @@
                 requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
-                    const urgencyClass = request.urgency.toLowerCase();
+                    // Check if urgency exists and has a toLowerCase method
+                    const urgencyClass = request.permission.urgency && typeof request.permission.urgency.toLowerCase === 'function' 
+                        ? request.permission.urgency.toLowerCase() 
+                        : 'unknown';
                     li.innerHTML = `
-                        <div class="request-info">
+                        <div class="request-info urgency ${urgencyClass}">
                             <span>${request.permission.appName} - ${request.permission.permissionName}</span>
-                            <span>${request.name}</span>
+                            <span>${request.userName}</span>
                         </div>
                     `;
                     
-                    li.onclick = () => openHandleRequestModal(request.id);
+                    li.onclick = () => openHandleRequestModal(request.permission.id);
                     requestsList.appendChild(li);
                 });
             } catch (error) {
                 console.error("Error loading pending requests:", error);
+                document.getElementById("pendingList").innerHTML = 
+                    '<li class="error-message">Error loading pending requests. Please try again later.</li>';
             }
         }
 
