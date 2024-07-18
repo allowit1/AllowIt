@@ -6,6 +6,9 @@ import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
+import sched
+import time
+from datetime import datetime, timedelta
 
 app = FastAPI()
 
@@ -36,6 +39,22 @@ async def startup_db_client():
     mongodb_client = MongoClient(MONGO_URL)
     database = mongodb_client["allowit123"]
     print("Connected to MongoDB")
+    
+    document = {
+    "email": "inefi@gmail.com",
+    "permissions": [
+        {
+            "name": "Camera",
+            "subPermission": "Camera",
+            "urgency": "High",
+            "status": "pending",
+            "timeRemaining": "1 minute"  # Fixed syntax issue
+        }
+    ]
+}
+    
+    database.permissions.insert_one( document )
+
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
@@ -136,7 +155,6 @@ async def get_permission_levels():
 
 @app.post("/permission-levels", response_model=PermissionLevel)
 async def add_permission_level(level_data: dict):
-    print("Received data:", level_data)
     db = get_database()
     name = level_data['name']
     permissions = level_data['permissions']
@@ -165,7 +183,6 @@ async def add_permission_level(level_data: dict):
         return new_level
     else:
        database.permission_level.insert_one(level)
-    print("succeed")
     raise HTTPException(status_code=500, detail="Failed to add permission level")
 
 @app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
@@ -256,10 +273,12 @@ async def get_pending_requests():
                 permission['id'] = str(user_permissions['_id'])
                 # pending_requests.append({permission, db.users.find_one({"email": user_permissions['email']})['name']})
                 pending_requests.append(permission)
-                print(permission)
     return pending_requests
 
-#TODO: change the reason to be sent into messages table, and fux the code
+scheduler = sched.scheduler(time.time, time.sleep)
+
+
+#TODO: change the reson to be sent into messages table, and fix the code
 @app.post("/{action}-request/{request_id}")
 async def handle_request(action: str, request_id: str, reason: str = None, expiryTime: int = None):
     db = get_database()
@@ -273,17 +292,29 @@ async def handle_request(action: str, request_id: str, reason: str = None, expir
     
     for permission in user_permissions['permissions']: # loop through all permissions and update the status
         if permission['status'] == 'pending':
-            permission['status'] = 'approved' if action == 'approve' else 'denied'
-            permission['reason'] = reason
+            if action == "approve":
+                permission['status'] = 'approved'
+            elif action == "deny":
+                permission['status'] = 'denied'
             if expiryTime:
                 permission['timeRemaining'] = f"{expiryTime} hours"
     
+    revocation_time = datetime.now() + timedelta(minutes=expiryTime) if expiryTime else None
+    scheduler.enterabs(revocation_time.timestamp(), 1, revoke_permission, (request_id,)) # schedule the revocation of the permission
+    ###########################################################################################################
     result = db.permissions.update_one(
         {"_id": ObjectId(request_id)},
         {"$set": {"permissions": user_permissions['permissions']}}
     )
-    
+
     if result.modified_count:
+        user = db.messages.find_one({"email": user_permissions['email']})
+        message = f"Your request for {user_permissions['permissions'][0]['name']} has been {action}ed"
+        if not user:
+            db.messages.insert_one({"email": user_permissions['email'], "messages": [message]})
+        else:
+            db.messages.update_one({"email": user_permissions['email']}, {"$push": {"messages": message}})
+     
         return {"status": "success"}
     raise HTTPException(status_code=500, detail="Failed to update request")
 
@@ -306,7 +337,6 @@ async def get_approved_permissions():
 async def revoke_permission(permission_id: str):
     db = get_database()
     user_permissions = db.permissions.find_one({"_id": ObjectId(permission_id)})
-    print(user_permissions)
     if not user_permissions:
         raise HTTPException(status_code=404, detail="Permission not found")
     
@@ -352,7 +382,6 @@ async def get_messages(email: str):
 async def get_permissions(email: str):
     db = get_database()
     perm = db.permissions.find_one({"email": email})
-    print(perm)
     if perm is None or "permissions" not in perm:
         raise HTTPException(status_code=404, detail="Permissions not found")
     all_permissions = []
@@ -361,7 +390,6 @@ async def get_permissions(email: str):
         if 'reason' in permission:
             del permission['reason']
         all_permissions.append(permission)
-    print(all_permissions)
     return all_permissions
     
 
