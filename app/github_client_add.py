@@ -1,12 +1,26 @@
 import requests
-import base64
+from pymongo import MongoClient
+import os
 
-def add_collaborator(repo, username, permission):
-    # Replace 'your_github_token' with your actual GitHub token
-    github_token = 'Z2hwX1dKZWk3OXZGSHNNSDFRcm94d2pLTUpndmJYVFppdDFtRktTaw=='
-    decoded_bytes = base64.b64decode(github_token)
+
+mongodb_client = None
+database = None
+MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
+
+def get_database():
+    global mongodb_client, database
+    if mongodb_client is None:
+        mongodb_client = MongoClient(MONGO_URL)
+        database = mongodb_client["allowit123"]
+    return database
+
+async def add_collaborator(repo, username, permission):
+    
+    db = get_database()
+    token = db.tokens.find_one({"service": "github"})["token"]
+
     headers = {
-        'Authorization': f'token {decoded_bytes.decode("utf-8")}',
+        'Authorization': f'token {token}',
         'Accept': 'application/vnd.github.v3+json'
     }
     
@@ -31,10 +45,3 @@ def add_collaborator(repo, username, permission):
     else:
         print(f'Failed to add {username} to {repo}. Status code: {response.status_code}')
         print(response.json())
-
-# Example usage:
-# repo = "allowit1/Example_Repo"
-# username = 'maor-noy'
-# permission = 'read'  # or 'read'
-
-# add_collaborator(repo, username, permission)

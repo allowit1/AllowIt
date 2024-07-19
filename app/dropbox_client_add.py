@@ -1,16 +1,30 @@
 import requests
-import base64
 import json
+from pymongo import MongoClient
+import os
 
-dropbox_token = "c2wuQjVSbnphNjNsTkNaaFlFSms1Vm1GYjZjX2RpclI2MmlYNUhXY0dfNFdVRnBuaFJXUGhSc1RjcFNDLXN5dFV4RDJBQVh5YVhBcnpyOTF4OENkX0ZCcEZOOE9ERXlHTlBrOWRNT2dHcTE1ZG5pZ0FzZGxqeml0Q1pXRkplcmZnZHRXU2NZVVZUcEVKR1M1LUE==="
-decoded_token = base64.b64decode(dropbox_token).decode('utf-8')
+mongodb_client = None
+database = None
+MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://mycluster:123qscesz@allowit.uk1mpor.mongodb.net/?retryWrites=true&w=majority&appName=AllowIt")
 
-headers = {
-    'Authorization': f'Bearer {decoded_token}',
+def get_database():
+    global mongodb_client, database
+    if mongodb_client is None:
+        mongodb_client = MongoClient(MONGO_URL)
+        database = mongodb_client["allowit123"]
+    return database
+
+
+def add_folder_member(folder_id, email, access_level='viewer'):
+
+    db = get_database()
+    token = db.tokens.find_one({"service": "dropbox"})["token"]
+
+    headers = {
+    'Authorization': f'Bearer {token}',
     'Content-Type': 'application/json'
 }
 
-def add_folder_member(folder_id, email, access_level='viewer'):
     url = 'https://api.dropboxapi.com/2/sharing/add_folder_member'
     data = {
         "shared_folder_id": folder_id,
