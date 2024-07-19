@@ -6,7 +6,7 @@ from pymongo import MongoClient
 import os
 from bson import ObjectId
 from baseModels import *
-from apscheduler.schedulers.background import BackgroundScheduler
+#from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
 from typing import List, Tuple
 from bson import ObjectId
@@ -19,9 +19,9 @@ import atexit
 
 app = FastAPI()
 
-scheduler = BackgroundScheduler()
-scheduler.start()
-atexit.register(lambda: scheduler.shutdown())
+#scheduler = BackgroundScheduler()
+#scheduler.start()
+#atexit.register(lambda: scheduler.shutdown())
 
 app.add_middleware(
     CORSMiddleware,
@@ -287,27 +287,26 @@ async def handle_request(action: str, request_id: str, request_body: RequestBody
             raise HTTPException(status_code=400, detail="Invalid action")
         
         user_permission = db.permissions.find_one({"_id": ObjectId(request_id)})
-        print(user_permission)
         if not user_permission:
             raise HTTPException(status_code=404, detail="Request not found")
         
-        if action == 'approve':
-            # Add permission to user
-            user_permission['status'] = 'approved'
-            if expiryTime is not None:
-                schedule_revoke(expiryTime, request_id)
-        else:
-            # Deny permission
-            user_permission['status'] = 'denied'
-        if expiryTime is not None:
-            user_permission['timeRemaining'] = f"{expiryTime} hours"
+        user_permission['status'] = 'approved' if action == 'approve' else 'denied'
+        if request_body.timeRemaining is not None:
+            user_permission['timeRemaining'] = request_body.timeRemaining
         
-        if reason:
-            db.messages.update_one(
-                {"email": user_permission['email']},
-                {"$push": {"messages": reason}}
-            )
-        
+        if request_body.reason:
+
+            new_message =  "your application was" +  action + " because " + request_body.reason
+            
+
+            if db.messages.find_one({"email": user_permission['email']}) is None:
+                db.messages.insert_one({"email": user_permission['email'], "messages": [request_body.reason]})
+            else:
+                db.messages.update_one(
+                    {"email": user_permission['email']},
+                    {"$push": {"messages": new_message}}
+                )
+            
         result = db.permissions.update_one(
             {"_id": ObjectId(request_id)},
             {"$set": user_permission}
@@ -315,7 +314,8 @@ async def handle_request(action: str, request_id: str, request_body: RequestBody
 
         if action == "approve":
             if user_permission['appName'] == "GitHub":
-                add_collaborator(repo, db.users.find_one({"email": user_permission['email']})['gitHub'], user_permission['permissionName'])
+                await add_collaborator(repo, db.users.find_one({"email": user_permission['email']})['gitHub'], user_permission['permissionName'])
+
             elif user_permission['appName'] == "Dropbox":
                 add_folder_member(folder_id, user_permission['email'], user_permission['permissionName'])
 
@@ -346,7 +346,6 @@ async def get_approved_permissions():
             permission['id'] = str(permission['_id'])
             del permission['_id']
             approved_permissions.append(permission)
-    print(approved_permissions)
     return approved_permissions
 
 # Revoke permission
@@ -401,7 +400,6 @@ async def get_application(name: str):
     
 @app.get("/messages/{email}", response_model=List[str])
 async def get_messages(email: str):
-    print(email)
     db = get_database()
     mes = db.messages.find_one({"email": email})
     if mes is None:
