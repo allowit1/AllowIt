@@ -21,15 +21,6 @@ class User(BaseModel):
     permissionLevel: str
     isAdmin: bool
 
-# # Model for permission requests
-# class PermissionRequest(BaseModel):
-#     user: User
-#     appName: str
-#     permissionName: Optional[str] = None
-#     urgency: str
-#     timeRemaining: Optional[str] = None
-#     reason: Optional[str] = None
-
 # Model for permissions 
 class Permission(BaseModel):
     email:str

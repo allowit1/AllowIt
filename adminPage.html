@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/adminPage.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
@@ -19,9 +20,15 @@
                 <p><strong>Email:</strong> <span id="adminEmail"></span></p>
             </div>
         </div>
+        <button class="ai-bot-toggle" onclick="toggleAIBotMessage()">
+            <i class="fas fa-robot"></i>
+        </button>
         <button class="dark-mode-toggle" onclick="toggleDarkMode()">
             <i class="fas fa-moon"></i>
         </button>
+        <div id="aiBotMessage" class="ai-bot-message">
+            <p>permission for maornoy1310@gmail.com (GitHub - write) is un-security</p>
+        </div>
     </header>
 
     <div class="container">
@@ -208,6 +215,25 @@
             }
         }
 
+        function toggleAIBotMessage() {
+            const messageElement = document.getElementById('aiBotMessage');
+            if (messageElement.style.display === 'none' || messageElement.style.display === '') {
+                messageElement.style.display = 'block';
+            } else {
+                messageElement.style.display = 'none';
+            }
+        }
+
+        // Close modal and AI bot message when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = "none";
+            }
+            if (!event.target.matches('.ai-bot-toggle') && !event.target.matches('.fa-robot')) {
+                document.getElementById('aiBotMessage').style.display = 'none';
+            }
+        }
+
         // Load users from the server
         async function loadUsers() {
             try {
@@ -266,17 +292,13 @@
                 requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
-                    const urgencyClass = request.permission.urgency && typeof request.permission.urgency.toLowerCase === 'function' 
-                        ? request.permission.urgency.toLowerCase() 
-                        : 'unknown';
                     li.innerHTML = `
-                        <div class="request-info urgency ${urgencyClass}">
-                            <span>${request.permission.appName} - ${request.permission.permissionName}</span>
-                            <span>${request.userName}</span>
+                        <div class="request-item">
+                            <span class="request-details">${request.permission.appName} - ${request.permission.permissionName}</span>
+                            <span class="user-name"><strong>${request.userName}</strong></span>
                         </div>
                     `;
                     
-                    // Use the correct ID from the request object
                     li.onclick = () => openHandleRequestModal(request.id);
                     requestsList.appendChild(li);
                 });
@@ -286,7 +308,7 @@
                     '<li class="error-message">Error loading pending requests. Please try again later.</li>';
             }
         }
-        
+
         async function loadApprovedPermissions() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);

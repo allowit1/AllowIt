@@ -72,6 +72,34 @@
     margin-top: 20px;
 }
 
+.ai-bot-toggle {
+    background: none;
+    border: none;
+    color: #ddd;
+    font-size: 1.5rem;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.ai-bot-message {
+    display: none;
+    position: absolute;
+    top: 60px;
+    right: 100px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    z-index: 1000;
+}
+
+.ai-bot-message p {
+    margin: 0;
+    font-size: 14px;
+    color: #272525;
+}
+
 .error-message {
     color: #D32F2F;
     text-align: center;
@@ -127,17 +155,6 @@
     color: white;
 }
 
-.low {
-    color: #000000;
-}
-
-.medium {
-    color: #9c7e2d;
-}
-
-.high{
-    color: #ad2a10;
-}
 
 @media (max-width: 768px) {
     .top-row {
