@@ -291,11 +291,16 @@
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("acceptedList");
+              
                 permissionsList.innerHTML = '';
                 permissions.forEach(permission => {
+                    if(!permission.timeRemaining)
+                {
+                    permission.timeRemaining = "unlimited";
+                }
                     const li = document.createElement("li");
                     li.innerHTML = `
-                        <span>${permission.name} - ${permission.urgency} - ${permission.timeRemaining}</span>
+                        <span>${permission.appName} - ${permission.urgency} - ${(permission.timeRemaining)}</span>
                         <button class="btn btn-small btn-danger" onclick="revokePermission('${permission.id}')">Revoke</button>
                     `;
                     permissionsList.appendChild(li);
