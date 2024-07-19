@@ -268,11 +268,6 @@ async def get_pending_requests():
     
     return result
 
-
-# def handle_approve_request(permission_request, permission):
-#     if permission.get("name", "").lower() == "github":
-#         add_collaborator("allowit1/Example_Repo", permission_request['email'], permission['subPermission'])
-
 #TODO: change the reason to be sent into messages table, and fux the code\
 # Handle request
 class RequestBody(BaseModel):

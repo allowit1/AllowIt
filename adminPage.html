@@ -293,6 +293,7 @@
                 const permissionsList = document.getElementById("acceptedList");
               
                 permissionsList.innerHTML = '';
+                console.log("Approved permissions:", permissions);
                 permissions.forEach(permission => {
                     if(!permission.timeRemaining)
                 {
@@ -300,7 +301,7 @@
                 }
                     const li = document.createElement("li");
                     li.innerHTML = `
-                        <span>${permission.appName} - ${permission.urgency} - ${(permission.timeRemaining)}</span>
+                        <span>${permission.appName} - ${permission.urgency} - ${permission.timeRemaining}</span>
                         <button class="btn btn-small btn-danger" onclick="revokePermission('${permission.id}')">Revoke</button>
                     `;
                     permissionsList.appendChild(li);
@@ -541,7 +542,6 @@
                 alert("Error: Request ID is missing. Please try again.");
                 return;
             }
-
             const reason = document.getElementById("requestReason").value;
             const time = document.getElementById("requestTime").value;
             const days = document.getElementById("requestDays").value;
