@@ -221,6 +221,87 @@ li:hover {
     width: 48%;
 }
 
+
+.urgency-options, .time-options {
+    display: flex;
+    flex-direction: column;
+}
+
+.urgency {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 5%;
+}
+
+.urgency label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.urgency input[type="radio"] {
+    margin-right: 8px;
+}
+
+.urgency label.low {
+    color: #595f69; /* Green for low urgency */
+}
+
+.urgency label.medium {
+    color: #f39c12; /* Orange for medium urgency */
+}
+
+.urgency label.high {
+    color: #b52a00; /* Red for high urgency */
+}
+
+/* Optional: Change color on hover */
+.urgency label:hover {
+    opacity: 0.8;
+}
+
+.urgency-span {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 10px;
+    margin-bottom: 5px;
+}
+
+.urgency-span .urgency {
+    font-weight: bold;
+}
+
+.urgency-span .urgency.low {
+    color: #2ecc71;
+}
+
+.urgency-span .urgency.medium {
+    color: #f39c12;
+}
+
+.urgency-span .urgency.high {
+    color: #e74c3c;
+}
+
+.request-details {
+    font-size: 14px;
+}
+
+.request-details-high {
+    font-weight: bold;
+}
+
+.user-name {
+    font-size: 14px;
+}
+
+/* Optional: Change color when selected */
+.urgency input[type="radio"]:checked + label {
+    font-weight: bold;
+}
+
 @media (max-width: 768px) {
     .container {
         padding: 15px;

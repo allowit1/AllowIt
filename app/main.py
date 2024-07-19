@@ -189,19 +189,18 @@ async def get_permission_levels():
 
     return result
 # Update permission level
-@app.put("/permission-levels/{level_id}", response_model=PermissionLevel)
-async def update_permission_level(level_id: str, level_data: dict):
+@app.put("/permission-levels/{level_name}", response_model=PermissionLevel)
+async def update_permission_level(level_name: str, level_data: dict):
     db = get_database()
-    appName = level_data['appName']
     permissions = level_data['permissions']
 
-    existing_level = db.permission_levels.find_one({"_id": ObjectId(level_id)})
+    existing_level = db.permission_levels.find_one({"levelName": level_name})
     if not existing_level:
         raise HTTPException(status_code=404, detail="Permission level not found")
     
     app_permissions = []
     for app_id, perms in permissions.items():
-        app = db.applications.find_one({"_id": ObjectId(app_id)})
+        app = db.applications.find_one({"levelName": level_name})
         if app:
             app_permissions.append(AppPermission(
                 appName=app['appName'],
@@ -225,14 +224,40 @@ async def update_permission_level(level_id: str, level_data: dict):
         raise HTTPException(status_code=500, detail="Failed to update permission level")
 
 # Delete permission level
-@app.delete("/permission-levels/{level_id}")
-async def delete_permission_level(level_id: str):
+@app.delete("/permission-levels/{level_name}")
+async def delete_permission_level(level_name: str):
     db = get_database()
-    result = db.permission_levels.delete_one({"_id": ObjectId(level_id)})
+    result = db.permission_levels.delete_one({"levelName": level_name})
+    # print(result)
+    # result = db.permission_levels.delete_one({"_id": ObjectId(result["_id"])})
+    # print(result)
     if result.deleted_count:
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="Permission level not found")
 
+@app.post("/permission-levels/{level_name}")
+async def add_permission_level(level_name: str, permissions: Dict[str, List[str]]):
+    db = get_database()
+
+    existing_level = db.permission_levels.find_one({"levelName": level_name})
+    if existing_level:
+        raise HTTPException(status_code=400, detail="Permission level already exists")
+    
+    app_permissions = []
+    for app_name, perms in permissions.items():
+        app_permissions.append(AppPermission(
+            appName=app_name,
+            permissions=perms
+        ))
+    print(app_permissions)
+    new_level = PermissionLevel(
+        levelName=level_name,
+        permissions=app_permissions
+    )
+
+    result = db.permission_levels.insert_one(new_level.dict())
+    if not result.acknowledged:
+        raise HTTPException(status_code=500, detail="Failed to add permission level")
 #endregion
 
 #region requests

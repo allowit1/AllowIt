@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/adminPage.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 </head>
 <body>
@@ -19,9 +20,15 @@
                 <p><strong>Email:</strong> <span id="adminEmail"></span></p>
             </div>
         </div>
+        <button class="ai-bot-toggle" onclick="toggleAIBotMessage()">
+            <i class="fas fa-robot"></i>
+        </button>
         <button class="dark-mode-toggle" onclick="toggleDarkMode()">
             <i class="fas fa-moon"></i>
         </button>
+        <div id="aiBotMessage" class="ai-bot-message">
+            <p>permission for maornoy1310@gmail.com (GitHub - write) is un-security</p>
+        </div>
     </header>
 
     <div class="container">
@@ -207,6 +214,26 @@
                 window.location.href = "index.html";
             }
         }
+
+        function toggleAIBotMessage() {
+            const messageElement = document.getElementById('aiBotMessage');
+            if (messageElement.style.display === 'none' || messageElement.style.display === '') {
+                messageElement.style.display = 'block';
+            } else {
+                messageElement.style.display = 'none';
+            }
+        }
+
+        // Close modal and AI bot message when clicking outside
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = "none";
+            }
+            if (!event.target.matches('.ai-bot-toggle') && !event.target.matches('.fa-robot')) {
+                document.getElementById('aiBotMessage').style.display = 'none';
+            }
+        }
+
         // Load users from the server
         async function loadUsers() {
             try {
@@ -265,17 +292,13 @@
                 requestsList.innerHTML = '';
                 requests.forEach(request => {
                     const li = document.createElement("li");
-                    const urgencyClass = request.permission.urgency && typeof request.permission.urgency.toLowerCase === 'function' 
-                        ? request.permission.urgency.toLowerCase() 
-                        : 'unknown';
                     li.innerHTML = `
-                        <div class="request-info urgency ${urgencyClass}">
-                            <span>${request.permission.appName} - ${request.permission.permissionName}</span>
-                            <span>${request.userName}</span>
+                        <div class="request-item">
+                            <span class="request-details">${request.permission.appName} - ${request.permission.permissionName}</span>
+                            <span class="user-name"><strong>${request.userName}</strong></span>
                         </div>
                     `;
                     
-                    // Use the correct ID from the request object
                     li.onclick = () => openHandleRequestModal(request.id);
                     requestsList.appendChild(li);
                 });
@@ -285,6 +308,7 @@
                     '<li class="error-message">Error loading pending requests. Please try again later.</li>';
             }
         }
+
         async function loadApprovedPermissions() {
             try {
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
@@ -433,45 +457,36 @@
         async function addPermissionLevel(event) {
             event.preventDefault();
             const name = document.getElementById("newLevelName").value;
-            const permissions = getSelectedPermissions("newLevelAppPermissions");
-            console.log("Sending data:", { name, permissions });
+            const permissions = {};
+            const radios = document.querySelectorAll('input[type="radio"]:checked');
+            radios.forEach(radio => {
+                const [temp, appName] = radio.name.split('_');
+                const permName = radio.value;
+                if (!permissions[appName]) {
+                    permissions[appName] = [];
+                }
+                permissions[appName].push(permName);
+            });
+
             try {
-                const response = await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
-                console.log("Response:", response.data);
+                const response = await axios.post(`${API_BASE_URL}/permission-levels/${name}`, permissions);
                 closeModal('newLevelModal');
                 await loadPermissionLevels();
             } catch (error) {
                 console.error("Error adding permission level:", error.response ? error.response.data : error.message);
             }
         }
-
-        async function addPermissionLevel(event) {
-            event.preventDefault();
-            const name = document.getElementById("newLevelName").value;
-            console.log(name);
-            const permissions = getSelectedPermissions("newLevelAppPermissions");
-            console.log(permissions);
-            try {
-                await axios.post(`${API_BASE_URL}/permission-levels`, { name, permissions });
-                closeModal('newLevelModal');
-                await loadPermissionLevels();
-            } catch (error) {
-                console.error("Error adding permission level:", error);
-            }
-        }
-
+        
         function editPermissionLevel(level) {
-            document.getElementById("editLevelId").value = level.id;
-            document.getElementById("editLevelName").value = level.name;
-            populatePermissions("editLevelAppPermissions", level.permissions);
+            document.getElementById("editLevelName").value = level.levelName;
+            populatePermissions("editLevelAppPermissions", level.permissions.map(perm => perm.permissions[0]));
             openModal('editLevelModal');
         }
-
         async function updatePermissionLevel(event) {
             event.preventDefault();
-            const id = document.getElementById("editLevelId").value;
+            const id = document.getElementById("editLevelId").value;//probably undefined
             const name = document.getElementById("editLevelName").value;
-            const permissions = getSelectedPermissions("editLevelAppPermissions");
+            console.log("Updating permission level:", { id, name, permissions });
             try {
                 await axios.put(`${API_BASE_URL}/permission-levels/${id}`, { name, permissions });
                 closeModal('editLevelModal');
@@ -481,10 +496,10 @@
             }
         }
         async function deletePermissionLevel() {
-            const id = document.getElementById("editLevelId").value;
+            const name = document.getElementById("editLevelName").value;
             if (confirm("Are you sure you want to delete this permission level?")) {
                 try {
-                    await axios.delete(`${API_BASE_URL}/permission-levels/${id}`);
+                    await axios.delete(`${API_BASE_URL}/permission-levels/${name}`);
                     closeModal('editLevelModal');
                     await loadPermissionLevels();
                 } catch (error) {
@@ -493,35 +508,28 @@
             }
         }
 
-        function getSelectedPermissions(containerId) {
-            const container = document.getElementById(containerId);
-            const permissions = {};
-            const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-            checkboxes.forEach(checkbox => {
-                const [appId, perm] = checkbox.name.split('_');
-                if (!permissions[appId]) permissions[appId] = [];
-                if (checkbox.checked) permissions[appId].push(perm);
-            });
-            return permissions;
-        }
-
         async function populatePermissions(containerId, selectedPermissions = {}) {
+            console.log(selectedPermissions);
             const container = document.getElementById(containerId);
             container.innerHTML = '';
+
             try {
                 const response = await axios.get(`${API_BASE_URL}/applications`);
                 const applications = response.data;
+
                 applications.forEach(app => {
                     const appDiv = document.createElement('div');
+                    const permissionsHTML = app.permissions.map(perm => `
+                        <label>
+                            <input type="radio" name="permissions_${app.name}" value="${perm}"
+                                ${selectedPermissions[app.name] === perm ? 'checked' : ''}>
+                            ${perm}
+                        </label>
+                    `).join('');
+                    
                     appDiv.innerHTML = `
                         <h4>${app.name}</h4>
-                        ${app.permissions.map(perm => `
-                            <label>
-                                <input type="checkbox" name="${app.id}_${perm}" 
-                                    ${selectedPermissions[app.id]?.includes(perm) ? 'checked' : ''}>
-                                ${perm}
-                            </label>
-                        `).join('')}
+                        ${permissionsHTML}
                     `;
                     container.appendChild(appDiv);
                 });
@@ -542,11 +550,6 @@
             document.getElementById("requestId").value = requestId;
             openModal('handleRequestModal');
         }
-
-
-
-
-
         
         async function handleRequest(action) {
             const requestId = document.getElementById("requestId").value;
@@ -582,7 +585,6 @@
             }
         }
 
-
         async function revokePermission(permissionId) {
             if (confirm("Are you sure you want to revoke this permission?")) {
                 try {
@@ -599,7 +601,8 @@
         document.getElementById("newUserForm").addEventListener("submit", addUser);
         document.getElementById("editUserForm").addEventListener("submit", updateUser);
         document.getElementById("newLevelForm").addEventListener("submit", addPermissionLevel);
-        document.getElementById("editLevelForm").addEventListener("submit", updatePermissionLevel);
+        // document.getElementById("editLevelForm").addEventListener("submit", updatePermissionLevel);
+        // document.getElementById("removeLevelForm").addEventListener("submit", deletePermissionLevel);
 
         // Close modal when clicking outside
         window.onclick = function(event) {

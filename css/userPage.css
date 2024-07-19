@@ -58,18 +58,6 @@
     margin-bottom: 15px;
 }
 
-.urgency-options, .time-options {
-    display: flex;
-    flex-direction: column;
-}
-
-.urgency {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-top: 5%;
-}
-
 .status {
     font-weight: bold;
     padding: 4px 8px;
@@ -89,6 +77,11 @@
 
 .denied {
     background-color: #e74c3c;
+    color: white;
+}
+
+.revoked {
+    background-color: #410700;
     color: white;
 }
 
