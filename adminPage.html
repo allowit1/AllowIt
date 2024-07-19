@@ -291,9 +291,14 @@
                 const response = await axios.get(`${API_BASE_URL}/approved-permissions`);
                 const permissions = response.data;
                 const permissionsList = document.getElementById("acceptedList");
+              
                 permissionsList.innerHTML = '';
                 console.log("Approved permissions:", permissions);
                 permissions.forEach(permission => {
+                    if(!permission.timeRemaining)
+                {
+                    permission.timeRemaining = "unlimited";
+                }
                     const li = document.createElement("li");
                     li.innerHTML = `
                         <span>${permission.appName} - ${permission.urgency} - ${permission.timeRemaining}</span>
