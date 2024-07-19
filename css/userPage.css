@@ -80,6 +80,11 @@
     color: white;
 }
 
+.revoked {
+    background-color: #410700;
+    color: white;
+}
+
 .time-remaining {
     margin-left: auto;
     margin-right: 20px;
