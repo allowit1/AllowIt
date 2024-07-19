@@ -336,7 +336,7 @@ async def handle_request(action: str, request_id: str, request_body: RequestBody
         
         if request_body.reason:
 
-            new_message =  "your application was" +  action + " because " + request_body.reason
+            new_message =  "your application was " +  action + " because " + request_body.reason
             
 
             if db.messages.find_one({"email": user_permission['email']}) is None:
