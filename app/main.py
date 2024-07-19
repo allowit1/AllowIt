@@ -75,7 +75,8 @@ async def get_user_details(email: str):
 @app.get("/users", response_model=List[User])
 async def get_users():
     db = get_database()
-    users = list(db.users.find({"isAdmin": False}))
+    users = list(db.users.find({"isAdmin":"false"}))
+    print(users)
     return users
 
 # Update user details
@@ -94,13 +95,32 @@ async def update_user(user_id: str, user: User):
     raise HTTPException(status_code=404, detail="User not found")
 
 # Delete user
-@app.delete("/users/{user_id}")
-async def delete_user(user_id: str):
+@app.delete("/users/{email}")
+async def delete_user(email: str):
     db = get_database()
-    result = db.users.delete_one({"_id": ObjectId(user_id)})
-    if result.deleted_count:
-        return {"status": "success"}
-    raise HTTPException(status_code=404, detail="User not found")
+    try:
+        # Log the start of the operation
+
+        # Delete the user
+        result = db.users.delete_one({"email": email})
+        
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Log successful user deletion
+
+        # Delete permissions
+        perm_result = db.permissions.delete_many({"email": email})
+
+        # Call delete_all_permissions
+        await delete_all_permissions(email)
+
+        return {"status": "success", "message": f"User and all associated data deleted for {email}"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
 
 
 # Add user
@@ -127,7 +147,7 @@ async def add_user(user_data: dict):
         gitHub=gitHub,
         permissionLevel=permissionLevel,
         isAdmin=False
-    )
+    )   
 
     result = db.users.insert_one(new_user.dict())
     if result.inserted_id:
@@ -422,6 +442,21 @@ async def get_permissions(email: str):
     return permissions
 
 #endregion
+
+async def delete_all_permissions(email: str):
+    db=get_database()
+    permissions = list(db.permissions.find({"email": email}))   
+    for permission in permissions:
+        if permission['appName'] == "GitHub":
+            github = db.users.find_one({"email": email})['gitHub']
+            print(github + "igqbiduwbuqi")
+            remove_collaborator(repo,github )  
+            print("removed")
+            db.permissions.delete_many({"email": email})   
+        elif permission['appName'] == "Dropbox":
+            remove_folder_member(folder_id, email)
+            db.permissions.delete_many({"email": email})
+        
 
 
 if __name__ == "__main__":
