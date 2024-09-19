@@ -297,7 +297,6 @@ li:hover {
     font-size: 14px;
 }
 
-/* Optional: Change color when selected */
 .urgency input[type="radio"]:checked + label {
     font-weight: bold;
 }

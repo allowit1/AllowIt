@@ -1,27 +1,19 @@
 from fastapi import FastAPI, HTTPException
-from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from pymongo import MongoClient
 import os
 from bson import ObjectId
 from baseModels import *
-#from apscheduler.schedulers.background import BackgroundScheduler
 from fastapi import FastAPI, HTTPException
-from typing import List, Tuple
+from typing import List
 from bson import ObjectId
 from github_client_add import *
 from github_client_remove import *
 from dropbox_client_add import *
 from dropbox_client_remove import *
 
-import atexit
-
 app = FastAPI()
-
-#scheduler = BackgroundScheduler()
-#scheduler.start()
-#atexit.register(lambda: scheduler.shutdown())
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,6 +30,7 @@ folder_id = '3362330899'
 # Global database connection
 mongodb_client = None
 database = None
+
 
 def get_database():
     global mongodb_client, database
@@ -99,15 +92,11 @@ async def update_user(user_id: str, user: User):
 async def delete_user(email: str):
     db = get_database()
     try:
-        # Log the start of the operation
-
         # Delete the user
         result = db.users.delete_one({"email": email})
         
         if result.deleted_count == 0:
             raise HTTPException(status_code=404, detail="User not found")
-
-        # Log successful user deletion
 
         # Delete permissions
         perm_result = db.permissions.delete_many({"email": email})
@@ -119,8 +108,6 @@ async def delete_user(email: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
-
-
 
 
 # Add user

@@ -399,11 +399,6 @@
 
         function editUser(user) {
             console.log("Editing user:", user);
-            // if (!user._id) {
-            //     console.error("User object does not have an _id property:", user);
-            //     alert("Error: Unable to edit user due to missing ID.");
-            //     return;
-            // }
             document.getElementById("editUserId").value = user._id;
             document.getElementById("editUserName").value = user.name;
             document.getElementById("editUserEmail").value = user.email;
@@ -482,6 +477,7 @@
             populatePermissions("editLevelAppPermissions", level.permissions.map(perm => perm.permissions[0]));
             openModal('editLevelModal');
         }
+
         async function updatePermissionLevel(event) {
             event.preventDefault();
             const id = document.getElementById("editLevelId").value;//probably undefined
@@ -601,8 +597,6 @@
         document.getElementById("newUserForm").addEventListener("submit", addUser);
         document.getElementById("editUserForm").addEventListener("submit", updateUser);
         document.getElementById("newLevelForm").addEventListener("submit", addPermissionLevel);
-        // document.getElementById("editLevelForm").addEventListener("submit", updatePermissionLevel);
-        // document.getElementById("removeLevelForm").addEventListener("submit", deletePermissionLevel);
 
         // Close modal when clicking outside
         window.onclick = function(event) {
