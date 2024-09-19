@@ -36,9 +36,10 @@
         <div id="loading" style="display: none;">Loading...</div>
     </div>
 
-    <button class="help-button" onclick="toggleHelpPopup()">
+    <button class="help-button" onclick="window.location.href='https://forms.gle/HuG95tnUuDnoqNeR8'">
         <img class="help-icon" src="../images/help-icon.png" alt="Help Icon" style="width: 30px; height: 30px;">
     </button>
+    
 
     <div class="help-popup" id="helpPopup">
         <!-- Help popup content -->
@@ -123,11 +124,11 @@
             document.getElementById("loading").style.display = isLoading ? "block" : "none";
         }
 
-        // Toggle the help popup
-        function toggleHelpPopup() {
-            var helpPopup = document.getElementById("helpPopup");
-            helpPopup.classList.toggle("active");
-        }
+        // // Toggle the help popup
+        // function toggleHelpPopup() {
+        //     var helpPopup = document.getElementById("helpPopup");
+        //     helpPopup.classList.toggle("active");
+        // }
 
         // Close the help popup if the user clicks outside it
         window.onclick = function(event) {
