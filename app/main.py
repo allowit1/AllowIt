@@ -458,7 +458,6 @@ async def delete_all_permissions(email: str):
     for permission in permissions:
         if permission['appName'] == "GitHub":
             github = db.users.find_one({"email": email})['gitHub']
-            print(github + "igqbiduwbuqi")
             remove_collaborator(repo,github )  
             print("removed")
             db.permissions.delete_many({"email": email})   
