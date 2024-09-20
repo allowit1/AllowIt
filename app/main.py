@@ -31,7 +31,6 @@ folder_id = '3362330899'
 mongodb_client = None
 database = None
 
-
 def get_database():
     global mongodb_client, database
     if mongodb_client is None:
@@ -144,10 +143,9 @@ async def add_user(user_data: dict):
 
 #endregion
 
-
 #region permissions-levels  
 
-# add permission level
+# get all of the permission levels
 @app.get("/permission-levels", response_model=List[PermissionLevel])
 async def get_permission_levels():
     db = get_database()
@@ -175,6 +173,7 @@ async def get_permission_levels():
             raise HTTPException(status_code=500, detail=str(e))
 
     return result
+
 # Update permission level
 @app.put("/permission-levels/{level_name}", response_model=PermissionLevel)
 async def update_permission_level(level_name: str, level_data: dict):
@@ -215,13 +214,12 @@ async def update_permission_level(level_name: str, level_data: dict):
 async def delete_permission_level(level_name: str):
     db = get_database()
     result = db.permission_levels.delete_one({"levelName": level_name})
-    # print(result)
-    # result = db.permission_levels.delete_one({"_id": ObjectId(result["_id"])})
-    # print(result)
     if result.deleted_count:
         return {"status": "success"}
     raise HTTPException(status_code=404, detail="Permission level not found")
 
+
+# Add permission level
 @app.post("/permission-levels/{level_name}")
 async def add_permission_level(level_name: str, permissions: Dict[str, List[str]]):
     db = get_database()
@@ -236,6 +234,7 @@ async def add_permission_level(level_name: str, permissions: Dict[str, List[str]
             appName=app_name,
             permissions=perms
         ))
+
     print(app_permissions)
     new_level = PermissionLevel(
         levelName=level_name,
@@ -271,9 +270,9 @@ async def add_permission_request(email: str, permission: Permission):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred: {str(e)}")
+
+
 # Get all pending requests
-
-
 @app.get("/pending-requests", response_model=List[PendingRequestWithName])
 async def get_pending_requests():
     db = get_database()
@@ -300,12 +299,12 @@ async def get_pending_requests():
     
     return result
 
-#TODO: change the reason to be sent into messages table, and fux the code\
-# Handle request
 class RequestBody(BaseModel):
     reason: Optional[str] = None
     timeRemaining: Optional[int] = None
 
+
+# Handle request
 @app.post("/{action}-pending-request/{request_id}")
 async def handle_request(action: str, request_id: str, request_body: RequestBody):
     try:
@@ -436,8 +435,6 @@ async def get_messages(email: str):
 #endregion
 
 #region permissions
-
-
 @app.get("/permissions/{email}", response_model=List[Permission])
 async def get_permissions(email: str):
     db = get_database()
@@ -468,8 +465,6 @@ async def delete_all_permissions(email: str):
         elif permission['appName'] == "Dropbox":
             remove_folder_member(folder_id, email)
             db.permissions.delete_many({"email": email})
-        
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=5001)
